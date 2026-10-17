@@ -63,7 +63,7 @@ public class PlayerMove : MonoBehaviour
         if (Mathf.Abs(dx) > deadZone)
         {
             bool mouseOnLeft = dx < 0;
-            sr.flipX = spriteFacesRight ? mouseOnLeft : !mouseOnLeft;
+            sr.flipX = spriteFacesRight ? !mouseOnLeft : mouseOnLeft;
         }
     }
 
