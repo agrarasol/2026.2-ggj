@@ -5,20 +5,6 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerMove : MonoBehaviour
 {
-
-    [Header("movimento")]
-    public float speed = 5f;
-    public float deadZone = 0.15f;
-    public bool holdToFollow = true;
-
-    [Header("Sprites ( desenhos olhando pra direita )")]
-    public Sprite spriteSide;
-    public Sprite spriteUpSide;
-    public Sprite spriteUp;
-    public Sprite spriteDownSide;
-    public Sprite spriteDown;
-    public bool sideSpritesFaceRight = true;
-
     public float speed = 5f;
     public float deadZone = 0.05f;        // distância horizontal mínima pra ele virar
     public bool holdToFollow = true;      // segurando o botão, o destino acompanha o mouse
