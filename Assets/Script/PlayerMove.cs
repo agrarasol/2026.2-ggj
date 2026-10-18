@@ -33,9 +33,33 @@ public class PlayerMove : MonoBehaviour
         targetPosition = rb.position;
     }
 
+    private void OnEnable()
+    {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged += OnGameStateChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged -= OnGameStateChanged;
+    }
+
+    private void OnGameStateChanged(GameState state)
+    {
+        if (state == GameState.Playing)
+        {
+            EndTransition();
+            return;
+        }
+
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
+    }
+
     void Update()
     {
-        if (IsDefeated || IsTransitioning || Mouse.current == null) return;
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || Mouse.current == null) return;
 
         Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
 
@@ -69,7 +93,7 @@ public class PlayerMove : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (IsDefeated)
+        if (!GameFlow.CanPlay || IsDefeated)
         {
             rb.linearVelocity = Vector2.zero;
             return;
@@ -86,7 +110,7 @@ public class PlayerMove : MonoBehaviour
 
     public void BeginTransition(Vector2 destination)
     {
-        if (IsDefeated)
+        if (!GameFlow.CanPlay || IsDefeated)
             return;
 
         IsTransitioning = true;
@@ -106,7 +130,7 @@ public class PlayerMove : MonoBehaviour
 
     public bool WantsToCrossDoor(Vector2 direction, Bounds doorwayBounds)
     {
-        if (IsDefeated || IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
             return false;
 
         Vector2 normal = direction.normalized;

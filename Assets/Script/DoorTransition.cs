@@ -68,6 +68,9 @@ public class DoorTransition : MonoBehaviour
 
     public static bool TryHandleCrossing(PlayerMove playerMove, Rigidbody2D body, Vector2 nextPosition)
     {
+        if (!GameFlow.CanPlay)
+            return false;
+
         PlayerRoomTracker tracker = playerMove.GetComponent<PlayerRoomTracker>();
         if (tracker == null)
             return false;
@@ -141,7 +144,7 @@ public class DoorTransition : MonoBehaviour
 
     private bool CanStartTransition(PlayerMove playerMove, PlayerRoomTracker tracker)
     {
-        return isActiveAndEnabled && transitioningPlayer == null &&
+        return GameFlow.CanPlay && isActiveAndEnabled && transitioningPlayer == null &&
             playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsTransitioning &&
             !playerMove.IsDefeated &&
             tracker != null && tracker.CurrentRoom == sourceRoom;
@@ -223,14 +226,14 @@ public class DoorTransition : MonoBehaviour
             float elapsed = 0f;
             float timeout = Mathf.Max(movementTimeout, 0.1f);
 
-            while (playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
+            while (GameFlow.CanPlay && playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                    !playerMove.ReachedTarget && elapsed < timeout)
             {
                 elapsed += Time.deltaTime;
                 yield return null;
             }
 
-            if (playerMove == null || playerMove.IsDefeated)
+            if (!GameFlow.CanPlay || playerMove == null || playerMove.IsDefeated)
                 yield break;
 
             if (!playerMove.isActiveAndEnabled || !playerMove.ReachedTarget)
@@ -248,7 +251,7 @@ public class DoorTransition : MonoBehaviour
             float duration = Mathf.Max(transitionDuration, 0.01f);
             timeout = Mathf.Max(timeout, duration);
 
-            while (playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
+            while (GameFlow.CanPlay && playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                    transitioningCamera != null &&
                    (elapsed < duration || !playerMove.ReachedTarget))
             {
@@ -266,7 +269,7 @@ public class DoorTransition : MonoBehaviour
                 yield return null;
             }
 
-            completed = playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
+            completed = GameFlow.CanPlay && playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                 playerMove.ReachedTarget && transitioningCamera != null;
 
             if (completed)

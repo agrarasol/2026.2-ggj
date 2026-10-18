@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(AudioSource))]
 public class GameOverSequence : MonoBehaviour
 {
     [Header("Painel (Canvas)")]
@@ -28,8 +30,24 @@ public class GameOverSequence : MonoBehaviour
 
     private bool started;
     private bool canRestart;
+    private AudioClip fallbackClip;
+
+    public bool IsRunning => started && !IsComplete;
+    public bool IsComplete { get; private set; }
+    public bool CanRestart => canRestart;
+    public event Action Completed;
 
     private void Awake()
+    {
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f;
+        HidePanel();
+    }
+
+    public void HidePanel()
     {
         if (panel != null)
         {
@@ -41,22 +59,27 @@ public class GameOverSequence : MonoBehaviour
         if (restartHint != null) restartHint.SetActive(false);
     }
 
-    // Liga no Inspector do CandleManager: Eventos > On Game Over > GameOverSequence.Play
+    // O GameFlow chama Play depois de entrar no estado GameOver.
     public void Play()
     {
-        if (started) return;
+        if (started || GameFlow.Instance == null || GameFlow.Instance.IsLoading ||
+            GameFlow.Instance.State != GameState.GameOver)
+            return;
+
         started = true;
+        IsComplete = false;
         StartCoroutine(Sequence());
     }
 
     private IEnumerator Sequence()
     {
         // 1. som de morte (ou tom provisório se não tiver clip)
-        AudioClip clip = deathClip != null ? deathClip : MakeFallbackTone();
-        if (audioSource != null)
-            audioSource.PlayOneShot(clip, volume);
-        else
-            AudioSource.PlayClipAtPoint(clip, Camera.main != null ? Camera.main.transform.position : Vector3.zero, volume);
+        if (deathClip == null && fallbackClip == null)
+            fallbackClip = MakeFallbackTone();
+
+        audioSource.PlayOneShot(deathClip != null ? deathClip : fallbackClip, volume);
+
+        if (creditsContent != null) creditsContent.gameObject.SetActive(false);
 
         yield return new WaitForSecondsRealtime(delayBeforeFade);
 
@@ -75,18 +98,26 @@ public class GameOverSequence : MonoBehaviour
         }
 
         canRestart = true;
+        if (restartHint != null) restartHint.SetActive(true);
 
         // 3. créditos sobem até sair da tela
         if (creditsContent != null)
         {
             RectTransform parent = creditsContent.parent as RectTransform;
+            creditsContent.gameObject.SetActive(true);
             creditsContent.anchorMin = new Vector2(0.5f, 0f);
             creditsContent.anchorMax = new Vector2(0.5f, 0f);
             creditsContent.pivot = new Vector2(0.5f, 1f);
             creditsContent.anchoredPosition = Vector2.zero;
             LayoutRebuilder.ForceRebuildLayoutImmediate(creditsContent);
 
-            float endY = parent.rect.height + creditsContent.rect.height;
+            if (creditsContent.TryGetComponent(out TMP_Text credits))
+            {
+                credits.ForceMeshUpdate();
+                creditsContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, credits.preferredHeight);
+            }
+
+            float endY = (parent != null ? parent.rect.height : Screen.height) + creditsContent.rect.height;
             while (creditsContent.anchoredPosition.y < endY)
             {
                 creditsContent.anchoredPosition += Vector2.up * (scrollSpeed * Time.unscaledDeltaTime);
@@ -107,15 +138,41 @@ public class GameOverSequence : MonoBehaviour
             logosGroup.alpha = 1f;
         }
 
-        if (restartHint != null) restartHint.SetActive(true);
+        IsComplete = true;
+        Completed?.Invoke();
     }
 
     private void Update()
     {
-        if (!canRestart || Keyboard.current == null) return;
+        if (!canRestart || Keyboard.current == null || GameFlow.Instance == null ||
+            GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.GameOver)
+            return;
 
         if (Keyboard.current.rKey.wasPressedThisFrame)
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            GameFlow.Instance.PlayGame();
+    }
+
+    public void StopSequence()
+    {
+        StopAllCoroutines();
+        if (audioSource != null)
+            audioSource.Stop();
+
+        started = false;
+        canRestart = false;
+        IsComplete = false;
+        HidePanel();
+    }
+
+    private void OnDisable()
+    {
+        StopSequence();
+    }
+
+    private void OnDestroy()
+    {
+        if (fallbackClip != null)
+            Destroy(fallbackClip);
     }
 
     // tom grave descendo, só pra não ficar mudo enquanto não tem o som final

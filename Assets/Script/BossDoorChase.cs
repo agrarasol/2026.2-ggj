@@ -32,6 +32,8 @@ public class BossDoorChase : MonoBehaviour
     private enum DoorPhase { None, ToApproach, ToEntry }
 
     private Rigidbody2D rb;
+    private Collider2D bossCollider;
+    private Collider2D playerCollider;
     private RoomZone currentRoom;
     private DoorTransition door;
     private DoorPhase phase = DoorPhase.None;
@@ -42,6 +44,7 @@ public class BossDoorChase : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        bossCollider = GetComponent<Collider2D>();
     }
 
     void Start()
@@ -49,13 +52,14 @@ public class BossDoorChase : MonoBehaviour
         if (player == null) player = FindAnyObjectByType<PlayerMove>();
         if (playerRoom == null && player != null) playerRoom = player.GetComponent<PlayerRoomTracker>();
         if (gameManager == null) gameManager = FindAnyObjectByType<CandleManager>();
+        if (player != null) playerCollider = player.GetComponent<Collider2D>();
 
         currentRoom = RoomZone.FindAt(rb.position);
     }
 
     void Update()
     {
-        if (player == null || player.IsDefeated || (gameManager != null && gameManager.IsGameOver))
+        if (!GameFlow.CanPlay || player == null || player.IsDefeated || (gameManager != null && gameManager.IsGameOver))
             return;
 
         float dist = Vector2.Distance(transform.position, player.transform.position);
@@ -86,8 +90,12 @@ public class BossDoorChase : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (player == null || playerRoom == null) return;
-        if (player.IsDefeated || (gameManager != null && gameManager.IsGameOver)) return;
+        if (!GameFlow.CanPlay || player == null || playerRoom == null ||
+            player.IsDefeated || (gameManager != null && gameManager.IsGameOver))
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
         if (Time.time < resumeTime) return;
 
         // atravessando uma porta: termina o caminho mesmo que a perseguição tenha acabado,
@@ -121,11 +129,20 @@ public class BossDoorChase : MonoBehaviour
     void ChasePlayer()
     {
         Vector2 target = player.transform.position;
-        MoveTo(target);
+        float distance = bossCollider != null && bossCollider.enabled &&
+            playerCollider != null && playerCollider.enabled
+            ? bossCollider.Distance(playerCollider).distance
+            : Vector2.Distance(rb.position, target);
 
         if (!player.IsTransitioning && gameManager != null &&
-            Vector2.Distance(rb.position, target) <= catchDistance)
+            distance <= catchDistance)
+        {
             gameManager.LoseGame();
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        MoveTo(target);
     }
 
     void FollowDoor()

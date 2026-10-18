@@ -40,12 +40,23 @@ public class HiddenEnemy : MonoBehaviour
 
     private void OnEnable()
     {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged += OnGameStateChanged;
+
         ScheduleNextAppearance();
+    }
+
+    private void OnGameStateChanged(GameState state)
+    {
+        if (state == GameState.Playing)
+            ScheduleNextAppearance();
+        else
+            Disappear();
     }
 
     private void LateUpdate()
     {
-        if (gameManager == null || gameManager.IsGameOver || player == null || roomTracker == null)
+        if (!GameFlow.CanPlay || gameManager == null || gameManager.IsGameOver || player == null || roomTracker == null)
             return;
 
         if (activeSpot != null)
@@ -81,7 +92,7 @@ public class HiddenEnemy : MonoBehaviour
 
     public bool TryAppear()
     {
-        if (!Application.isPlaying || !isActiveAndEnabled || activeSpot != null ||
+        if (!GameFlow.CanPlay || !Application.isPlaying || !isActiveAndEnabled || activeSpot != null ||
             gameManager == null || gameManager.IsGameOver || player == null ||
             player.IsDefeated || player.IsTransitioning || roomTracker == null ||
             roomTracker.CurrentRoom == null || enemyPrefab == null || hidingSpots == null)
@@ -161,6 +172,9 @@ public class HiddenEnemy : MonoBehaviour
 
     private void OnDisable()
     {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged -= OnGameStateChanged;
+
         Disappear();
     }
 }

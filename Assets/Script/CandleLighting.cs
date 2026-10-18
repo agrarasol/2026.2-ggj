@@ -23,7 +23,7 @@ public class CandleLighting : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (globalLight == null)
+        if (!GameFlow.CanPlay || globalLight == null)
             return;
 
         globalLight.intensity = Mathf.MoveTowards(

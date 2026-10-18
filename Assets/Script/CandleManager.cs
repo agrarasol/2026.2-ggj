@@ -56,6 +56,34 @@ public class CandleManager : MonoBehaviour
     public float InteractionDistance => interactionDistance;
     public bool IsGameOver => gameOver;
 
+    private void OnEnable()
+    {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged += OnGameStateChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (GameFlow.Instance != null)
+            GameFlow.Instance.StateChanged -= OnGameStateChanged;
+
+        if (beepSource != null)
+            beepSource.Stop();
+    }
+
+    private void OnGameStateChanged(GameState state)
+    {
+        if (state == GameState.Playing)
+        {
+            if (activeCandle == null)
+                ScheduleNextExtinguish();
+        }
+        else if (beepSource != null)
+        {
+            beepSource.Stop();
+        }
+    }
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Start()
     {
@@ -71,7 +99,7 @@ public class CandleManager : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        if(gameOver) return;
+        if (!GameFlow.CanPlay || gameOver) return;
 
         if(activeCandle == null)
         {
@@ -91,7 +119,7 @@ public class CandleManager : MonoBehaviour
 
     private void TryExtinguishCandle()
     {
-        if (gameOver || activeCandle != null || candles == null)
+        if (!GameFlow.CanPlay || gameOver || activeCandle != null || candles == null)
             return;
         
         if(roomTracker == null|| roomTracker.CurrentRoom == null)
@@ -192,7 +220,7 @@ public class CandleManager : MonoBehaviour
 
     public bool TryRelight(Candle candle)
     {
-        if (gameOver || player == null)
+        if (!GameFlow.CanPlay || gameOver || player == null)
             return false;
 
         if (candle == null || candle != activeCandle)
@@ -233,7 +261,7 @@ public class CandleManager : MonoBehaviour
     [ContextMenu("DEBUG/Perder jogo")]
     public void LoseGame()
     {
-        if (gameOver)
+        if (!GameFlow.CanPlay || gameOver)
             return;
 
         gameOver = true;
@@ -253,7 +281,7 @@ public class CandleManager : MonoBehaviour
     [ContextMenu("DEBUG/Apagar vela agora")]
     private void DebugExtinguish()
     {
-        if (gameOver)
+        if (!GameFlow.CanPlay || gameOver)
             return;
 
         if (activeCandle != null)
@@ -276,7 +304,7 @@ public class CandleManager : MonoBehaviour
     [ContextMenu("DEBUG/Reacender vela")]
     private void DebugRelight()
     {
-        if (gameOver || activeCandle == null)
+        if (!GameFlow.CanPlay || gameOver || activeCandle == null)
             return;
 
         activeCandle.SetLit(true);
