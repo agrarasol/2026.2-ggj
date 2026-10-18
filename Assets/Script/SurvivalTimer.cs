@@ -46,10 +46,10 @@ public class SurvivalTimer : MonoBehaviour
 
     private void OnGameStateChanged(GameState state)
     {
-        if (state == GameState.Playing)
+        if (state == GameState.Playing && GameFlow.Instance.PreviousState != GameState.Paused)
             ResetTimer();
 
-        SetHudVisible(state == GameState.Playing);
+        SetHudVisible(state == GameState.Playing || state == GameState.Paused);
     }
 
     private void Update()

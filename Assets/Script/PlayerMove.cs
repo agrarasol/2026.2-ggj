@@ -50,8 +50,15 @@ public class PlayerMove : MonoBehaviour
 
     private void OnGameStateChanged(GameState state)
     {
+        if (state == GameState.Paused) return;
         if (state == GameState.Playing)
         {
+            if (GameFlow.Instance.PreviousState == GameState.Paused)
+            {
+                waitForMouseRelease = true;
+                consumedMouseFrame = Time.frameCount;
+                return;
+            }
             EndTransition();
             return;
         }

@@ -48,6 +48,8 @@ public class HiddenEnemy : MonoBehaviour
 
     private void OnGameStateChanged(GameState state)
     {
+        if (state == GameState.Paused ||
+            (state == GameState.Playing && GameFlow.Instance.PreviousState == GameState.Paused)) return;
         if (state == GameState.Playing)
             ScheduleNextAppearance();
         else
@@ -89,7 +91,6 @@ public class HiddenEnemy : MonoBehaviour
         if (Time.time >= nextAppearanceTime && !TryAppear())
         {
             nextAppearanceTime = Time.time + 1f;
-            TutorialManager.CallHidenTutorial();
         }
     }
 
@@ -145,6 +146,7 @@ public class HiddenEnemy : MonoBehaviour
 
         enemyInstance.SetActive(true);
         disappearTime = Time.time + Mathf.Max(visibleDuration, 0.1f);
+        TutorialManager.CallHidenTutorial();
         return true;
     }
 

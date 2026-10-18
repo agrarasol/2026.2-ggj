@@ -11,6 +11,7 @@ public class FurnitureInteractor : MonoBehaviour
     [SerializeField] private SurvivalTimer survivalTimer;
     [SerializeField] private FurnitureLootTable lootTable;
     [SerializeField] private FurnitureInteractionUI feedback;
+    [SerializeField] private CollectedItemsHUD collectedItems;
 
     private PlayerMove player;
     private PlayerRoomTracker roomTracker;
@@ -31,6 +32,8 @@ public class FurnitureInteractor : MonoBehaviour
         playerCollider = GetComponent<Collider2D>();
         worldCamera = Camera.main;
         candleManager = FindAnyObjectByType<CandleManager>();
+        if (collectedItems == null && GameFlow.Instance != null)
+            collectedItems = GameFlow.Instance.CollectedItems;
     }
 
     private void OnEnable()
@@ -48,12 +51,13 @@ public class FurnitureInteractor : MonoBehaviour
 
     private void OnGameStateChanged(GameState state)
     {
-        if (state != GameState.Playing)
+        if (state != GameState.Playing && state != GameState.Paused)
             CancelSearch();
     }
 
     private void Update()
     {
+        if (GameFlow.IsPaused) return;
         if (!GameFlow.CanPlay || player.IsDefeated || player.IsTransitioning)
         {
             CancelSearch();
@@ -158,7 +162,11 @@ public class FurnitureInteractor : MonoBehaviour
         }
 
         FurnitureLootEntry result = lootTable.Roll();
-        if (result != null) survivalTimer.AddTime(result.timeBonus);
+        if (result != null)
+        {
+            survivalTimer.AddTime(result.timeBonus);
+            if (collectedItems != null) collectedItems.Collect(result);
+        }
         if (feedback != null) feedback.ShowResult(result);
     }
 

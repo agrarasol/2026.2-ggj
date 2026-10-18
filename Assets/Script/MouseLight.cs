@@ -33,6 +33,7 @@ public class MouseLight : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (GameFlow.IsPaused) return;
         if (Mouse.current == null)
             return;
 

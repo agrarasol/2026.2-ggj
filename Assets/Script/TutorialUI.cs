@@ -31,17 +31,20 @@ public class TutorialUI : MonoBehaviour
             return;
         }
 
+        if (messageCoroutine != null)
+            StopCoroutine(messageCoroutine);
+
         text.text = message;
-        instance.messageCoroutine = instance.StartCoroutine(instance.StartMessage());
+        messageCoroutine = StartCoroutine(StartMessage());
     }
 
     private IEnumerator StartMessage()
     {
-        yield return StartCoroutine(Fade(0, 1));
+        yield return Fade(0, 1);
         yield return new WaitForSeconds(textDuration);
-        yield return StartCoroutine(Fade(1, 0));
+        yield return Fade(1, 0);
 
-        instance.messageCoroutine = null;
+        messageCoroutine = null;
     }
 
     private IEnumerator Fade(float startAlpha, float endAlpha)

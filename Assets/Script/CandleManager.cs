@@ -75,7 +75,7 @@ public class CandleManager : MonoBehaviour
     {
         if (state == GameState.Playing)
         {
-            if (activeCandle == null)
+            if (activeCandle == null && GameFlow.Instance.PreviousState != GameState.Paused)
                 ScheduleNextExtinguish();
         }
         else if (beepSource != null)

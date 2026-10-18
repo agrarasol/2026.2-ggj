@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,7 +13,8 @@ public enum GameState
     Menu,
     Playing,
     GameOver,
-    Credits
+    Credits,
+    Paused
 }
 
 [DefaultExecutionOrder(-100)]
@@ -20,6 +23,7 @@ public class GameFlow : MonoBehaviour
     [Header("Paineis do Canvas")]
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject gameOverPanel;
+    [SerializeField] private GameObject pausePanel;
 
     [Header("Transicao de telas")]
     [SerializeField] private PixelScreenTransition screenTransition;
@@ -32,6 +36,9 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private Button quitButton;
     [SerializeField] private Button retryButton;
     [SerializeField] private Button mainMenuButton;
+    [SerializeField] private Button resumeButton;
+    [SerializeField] private Button restartButton;
+    [SerializeField] private Button pauseExitButton;
 
     private static bool playAfterReload;
     private bool startPlaying;
@@ -39,12 +46,16 @@ public class GameFlow : MonoBehaviour
 
     public static GameFlow Instance { get; private set; }
     public static bool CanPlay => Instance != null && Instance.IsPlaying;
+    public static bool IsPaused => Instance != null && Instance.State == GameState.Paused;
 
     public GameState State { get; private set; } = GameState.Menu;
+    public GameState PreviousState { get; private set; } = GameState.Menu;
     public bool IsLoading { get; private set; }
     public bool IsScreenTransitioning { get; private set; }
     public bool IsPlaying => State == GameState.Playing && !IsLoading && !IsScreenTransitioning;
     public event Action<GameState> StateChanged;
+    public CollectedItemsHUD CollectedItems { get; private set; }
+    internal Canvas InterfaceCanvas => mainMenuPanel != null ? mainMenuPanel.GetComponentInParent<Canvas>(true) : null;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStartupState()
@@ -56,6 +67,7 @@ public class GameFlow : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        ConnectExistingUI();
         if (gameOverSequence != null)
             gameOverSequence.Completed += FinishCredits;
         startPlaying = playAfterReload;
@@ -77,6 +89,42 @@ public class GameFlow : MonoBehaviour
         SetPanels(!startPlaying, false);
     }
 
+    private void ConnectExistingUI()
+    {
+        Canvas canvas = InterfaceCanvas;
+        if (pausePanel == null && canvas != null)
+            pausePanel = FindUIElement(canvas.transform, "PauseMenu")?.gameObject;
+        if (pausePanel != null)
+        {
+            if (resumeButton == null) resumeButton = FindUIElement(pausePanel.transform, "ResumeButton")?.GetComponent<Button>();
+            if (restartButton == null) restartButton = FindUIElement(pausePanel.transform, "RestartButton")?.GetComponent<Button>();
+            if (pauseExitButton == null) pauseExitButton = FindUIElement(pausePanel.transform, "ExitButton")?.GetComponent<Button>();
+        }
+        ConnectButton(resumeButton, ResumeGame);
+        ConnectButton(restartButton, RestartGame);
+        ConnectButton(pauseExitButton, ShowMainMenu);
+        CollectedItems = GetComponent<CollectedItemsHUD>();
+        if (CollectedItems == null && canvas != null && FindUIElement(canvas.transform, "ItensHUD") != null)
+            CollectedItems = gameObject.AddComponent<CollectedItemsHUD>();
+    }
+
+    private void ConnectButton(Button button, UnityAction action)
+    {
+        if (button == null) return;
+        for (int i = 0; i < button.onClick.GetPersistentEventCount(); i++)
+            if (button.onClick.GetPersistentTarget(i) == this && button.onClick.GetPersistentMethodName(i) == action.Method.Name &&
+                button.onClick.GetPersistentListenerState(i) != UnityEventCallState.Off)
+                return;
+        button.onClick.AddListener(action);
+    }
+
+    internal static Transform FindUIElement(Transform root, string elementName)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            if (child.name == elementName) return child;
+        return null;
+    }
+
     private void Start()
     {
         if (hasStarted)
@@ -88,10 +136,40 @@ public class GameFlow : MonoBehaviour
             ShowMainMenu();
     }
 
+    private void Update()
+    {
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            TogglePause();
+    }
+
+    public void TogglePause()
+    {
+        if (IsPaused) ResumeGame();
+        else PauseGame();
+    }
+
+    public void PauseGame()
+    {
+        if (!IsPlaying || pausePanel == null) return;
+        SetState(GameState.Paused);
+    }
+
+    public void ResumeGame()
+    {
+        if (!IsPaused || IsLoading || IsScreenTransitioning) return;
+        SetState(GameState.Playing);
+    }
+
+    public void RestartGame()
+    {
+        if (IsLoading || IsScreenTransitioning || (State != GameState.Paused && State != GameState.GameOver)) return;
+        RestartGameplay();
+    }
+
     private void LateUpdate()
     {
         EventSystem eventSystem = EventSystem.current;
-        if (IsLoading || IsScreenTransitioning || (State != GameState.Menu && State != GameState.GameOver) || eventSystem == null || !eventSystem.sendNavigationEvents ||
+        if (IsLoading || IsScreenTransitioning || (State != GameState.Menu && State != GameState.GameOver && State != GameState.Paused) || eventSystem == null || !eventSystem.sendNavigationEvents ||
             eventSystem.currentSelectedGameObject != null)
             return;
 
@@ -100,13 +178,13 @@ public class GameFlow : MonoBehaviour
         if (navigation != null && navigation.WasPerformedThisFrame() &&
             navigation.ReadValue<Vector2>().sqrMagnitude > 0f)
         {
-            SelectButton(State == GameState.Menu ? playButton : retryButton);
+            SelectButton(State == GameState.Menu ? playButton : State == GameState.Paused ? resumeButton : retryButton);
         }
     }
 
     public void PlayGame()
     {
-        if (IsLoading || IsScreenTransitioning || IsPlaying || State == GameState.Credits)
+        if (IsLoading || IsScreenTransitioning || IsPlaying || IsPaused || State == GameState.Credits)
             return;
 
         if (hasStarted)
@@ -233,7 +311,7 @@ public class GameFlow : MonoBehaviour
         Scene scene = gameObject.scene;
 
         IsLoading = true;
-        foreach (Button button in new[] { playButton, quitButton, retryButton, mainMenuButton })
+        foreach (Button button in new[] { playButton, quitButton, retryButton, mainMenuButton, resumeButton, restartButton, pauseExitButton })
             if (button != null)
                 button.interactable = false;
 
@@ -249,6 +327,12 @@ public class GameFlow : MonoBehaviour
             mainMenuPanel.SetActive(showMainMenu);
         if (gameOverPanel != null)
             gameOverPanel.SetActive(showGameOver);
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(State == GameState.Paused);
+            if (pausePanel.activeSelf && !IsScreenTransitioning)
+                pausePanel.transform.SetAsLastSibling();
+        }
 
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(null);
@@ -257,6 +341,7 @@ public class GameFlow : MonoBehaviour
     private void SetState(GameState state, bool updatePanels = true)
     {
         bool changed = State != state;
+        PreviousState = State;
         State = state;
         Time.timeScale = state == GameState.Playing && !IsScreenTransitioning ? 1f : 0f;
         if (updatePanels) SetPanels(state == GameState.Menu, state == GameState.GameOver);

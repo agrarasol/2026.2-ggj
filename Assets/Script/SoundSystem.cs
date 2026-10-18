@@ -114,6 +114,18 @@ public class SoundSystem : MonoBehaviour
 
     private void OnStateChanged(GameState state)
     {
+        if (state == GameState.Paused)
+        {
+            foreach (AudioSource source in new[] { musicSource, caneSource, bossStepSource, bossGruntSource, hiddenCrySource, ambientSource })
+                source.Pause();
+            return;
+        }
+        if (state == GameState.Playing && gameFlow.PreviousState == GameState.Paused)
+        {
+            foreach (AudioSource source in new[] { musicSource, caneSource, bossStepSource, bossGruntSource, hiddenCrySource, ambientSource })
+                source.UnPause();
+            return;
+        }
         StopGameplaySounds();
         ResetMotion();
         wasPlaying = false;
@@ -121,6 +133,7 @@ public class SoundSystem : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (GameFlow.IsPaused) return;
         UpdateMusic();
         if (!GameFlow.CanPlay)
         {
@@ -175,9 +188,11 @@ public class SoundSystem : MonoBehaviour
     private IEnumerator FadeMusic(float target)
     {
         float start = musicSource.volume;
-        for (float elapsed = 0f; elapsed < musicFadeDuration; elapsed += Time.unscaledDeltaTime)
+        for (float elapsed = 0f; elapsed < musicFadeDuration;)
         {
+            if (GameFlow.IsPaused) { yield return null; continue; }
             musicSource.volume = Mathf.Lerp(start, target, elapsed / musicFadeDuration);
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
         musicSource.volume = target;
