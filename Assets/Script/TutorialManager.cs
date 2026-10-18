@@ -4,7 +4,7 @@ public class TutorialManager : MonoBehaviour
 {
     private const string START_TEXT = "Clique com o mouse para se mover\nProcure por itens para aumentar o tempo";
     private const string CHASE_TEXT = "";
-    private const string CANDLE_TEXT = "";
+    private const string CANDLE_TEXT = "Vá para a vela apagada e acenda com 'E'";
     private const string HIDEN_TEXT = "";
 
     public static bool startingTutorial;        // Se moveu a primeira vez? Mostra mensagem

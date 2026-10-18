@@ -148,6 +148,7 @@ public class CandleManager : MonoBehaviour
         remainingTime = relightDuration;
         beepTimer = 0f;
 
+        TutorialManager.CallCandleTutorial(); // Chama tutorial de vela
         Debug.Log("Vela Apagada: " + activeCandle.name);
         
     }
