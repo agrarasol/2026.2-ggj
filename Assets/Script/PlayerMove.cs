@@ -77,6 +77,7 @@ public class PlayerMove : MonoBehaviour
         {
             pressStartedOnUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
             if (!pressStartedOnUI) targetPosition = mouseWorldPos;
+            TutorialManager.CallStartTutorial(); // Chama tutorial inicial do jogo
         }
         else if (holdToFollow && Mouse.current.leftButton.isPressed && !pressStartedOnUI)
         {
