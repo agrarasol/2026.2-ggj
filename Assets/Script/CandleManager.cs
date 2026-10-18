@@ -223,6 +223,10 @@ public class CandleManager : MonoBehaviour
         if (!GameFlow.CanPlay || gameOver || player == null)
             return false;
 
+        PlayerMove movement = player.GetComponent<PlayerMove>();
+        if (movement != null && movement.IsInteracting)
+            return false;
+
         if (candle == null || candle != activeCandle)
             return false;
 

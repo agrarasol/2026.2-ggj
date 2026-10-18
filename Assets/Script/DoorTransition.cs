@@ -146,7 +146,7 @@ public class DoorTransition : MonoBehaviour
     {
         return GameFlow.CanPlay && isActiveAndEnabled && transitioningPlayer == null &&
             playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsTransitioning &&
-            !playerMove.IsDefeated &&
+            !playerMove.IsDefeated && !playerMove.IsInteracting &&
             tracker != null && tracker.CurrentRoom == sourceRoom;
     }
 

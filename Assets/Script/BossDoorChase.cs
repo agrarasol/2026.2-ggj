@@ -24,12 +24,16 @@ public class BossDoorChase : MonoBehaviour
 
     [Header("Portas")]
     [SerializeField, Min(0f)] private float doorPause = 0.4f;
+    [Tooltip("Recuo em relacao ao ponto de aproximacao enquanto o jogador troca de sala.")]
+    [SerializeField, Min(0.1f)] private float doorWaitingDistance = 1.5f;
+    [Tooltip("Quanto o boss avanca alem da chegada do jogador para liberar a passagem.")]
+    [SerializeField, Min(0.1f)] private float doorClearanceDistance = 1.5f;
 
     [Header("Debug (so leitura)")]
     [SerializeField] private float currentChance;
     [SerializeField] private bool chasing;
 
-    private enum DoorPhase { None, ToApproach, ToEntry }
+    private enum DoorPhase { None, ToApproach, ToEntry, ToClearance }
 
     private Rigidbody2D rb;
     private Collider2D bossCollider;
@@ -40,6 +44,10 @@ public class BossDoorChase : MonoBehaviour
     private float resumeTime;
     private float nextDecisionTime;
     private float chaseEndTime;
+    private Vector2 clearancePoint;
+    private float clearanceBestDistance;
+    private float clearanceLastProgressTime;
+    private readonly RaycastHit2D[] clearanceHits = new RaycastHit2D[16];
 
     void Awake()
     {
@@ -96,23 +104,49 @@ public class BossDoorChase : MonoBehaviour
             rb.linearVelocity = Vector2.zero;
             return;
         }
-        if (Time.time < resumeTime) return;
+        RoomZone targetRoom = playerRoom.CurrentRoom;
+        if (currentRoom == null)
+            currentRoom = RoomZone.FindAt(rb.position);
 
-        // atravessando uma porta: termina o caminho mesmo que a perseguição tenha acabado,
-        // pra ele não ficar parado no meio do vão
+        // Depois de cruzar o centro da porta, termina de liberar o vao.
+        bool committed = phase == DoorPhase.ToClearance ||
+            (phase == DoorPhase.ToEntry && HasCrossedDoor());
+        if (!committed)
+        {
+            // CurrentRoom ainda pode ser a sala antiga durante a transicao do player.
+            if (player.IsTransitioning || targetRoom == null)
+            {
+                WaitOutsideDoor();
+                return;
+            }
+
+            if (phase != DoorPhase.None)
+            {
+                DoorTransition nextDoor = chasing && currentRoom != targetRoom
+                    ? DoorTransition.NextDoorTowards(currentRoom, targetRoom)
+                    : null;
+                if (door == null || !door.isActiveAndEnabled || door != nextDoor)
+                    CancelDoorApproach();
+            }
+        }
+
+        if (Time.time < resumeTime)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
         if (phase != DoorPhase.None)
         {
             FollowDoor();
             return;
         }
 
-        if (!chasing) return;
-
-        RoomZone targetRoom = playerRoom.CurrentRoom;
-        if (targetRoom == null) return; // player no meio de uma porta: espera
-
-        if (currentRoom == null)
-            currentRoom = RoomZone.FindAt(rb.position);
+        if (!chasing)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
 
         // mesma sala (ou fora de qualquer sala): vai direto no player
         if (currentRoom == null || currentRoom == targetRoom)
@@ -128,28 +162,128 @@ public class BossDoorChase : MonoBehaviour
 
     void ChasePlayer()
     {
-        Vector2 target = player.transform.position;
-        float distance = bossCollider != null && bossCollider.enabled &&
-            playerCollider != null && playerCollider.enabled
-            ? bossCollider.Distance(playerCollider).distance
-            : Vector2.Distance(rb.position, target);
+        if (!TryCatchPlayer())
+            MoveTo(player.transform.position);
+    }
 
-        if (!player.IsTransitioning && gameManager != null &&
-            distance <= catchDistance)
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        CatchOnContact(collision);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        CatchOnContact(collision);
+    }
+
+    private void CatchOnContact(Collision2D collision)
+    {
+        if (!GameFlow.CanPlay || player == null || player.IsDefeated ||
+            gameManager == null || gameManager.IsGameOver)
+            return;
+
+        if (collision.collider.GetComponentInParent<PlayerMove>() == player)
         {
             gameManager.LoseGame();
             rb.linearVelocity = Vector2.zero;
+        }
+    }
+
+    private bool TryCatchPlayer()
+    {
+        if (player.IsTransitioning || gameManager == null)
+            return false;
+
+        float distance = bossCollider != null && bossCollider.enabled &&
+            playerCollider != null && playerCollider.enabled
+            ? bossCollider.Distance(playerCollider).distance
+            : Vector2.Distance(rb.position, player.transform.position);
+
+        if (distance <= catchDistance)
+        {
+            gameManager.LoseGame();
+            rb.linearVelocity = Vector2.zero;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool HasCrossedDoor()
+    {
+        if (door == null)
+            return false;
+
+        Vector2 direction = door.EntryPosition - door.ApproachPosition;
+        if (direction.sqrMagnitude < 0.0001f)
+            return false;
+
+        Collider2D doorway = door.GetComponent<Collider2D>();
+        Vector2 center = doorway != null ? (Vector2)doorway.bounds.center :
+            (door.ApproachPosition + door.EntryPosition) * 0.5f;
+        return Vector2.Dot(rb.position - center, direction.normalized) >= 0f;
+    }
+
+    private void WaitOutsideDoor()
+    {
+        rb.linearVelocity = Vector2.zero;
+        if (door == null || !door.isActiveAndEnabled)
+        {
+            CancelDoorApproach();
             return;
         }
 
-        MoveTo(target);
+        Vector2 direction = (door.EntryPosition - door.ApproachPosition).normalized;
+        Vector2 waitingPoint = door.ApproachPosition - direction * doorWaitingDistance;
+        float retreat = Vector2.Dot(rb.position - waitingPoint, direction);
+        if (retreat > pointReachedDistance)
+        {
+            Vector2 target = rb.position - direction * retreat;
+            if (currentRoom != null && currentRoom.Contains(target))
+                MoveTo(target);
+        }
+
+        phase = DoorPhase.ToApproach;
+        resumeTime = 0f;
+    }
+
+    private void CancelDoorApproach()
+    {
+        door = null;
+        phase = DoorPhase.None;
+        resumeTime = 0f;
+        rb.linearVelocity = Vector2.zero;
     }
 
     void FollowDoor()
     {
+        if (phase == DoorPhase.ToClearance)
+        {
+            if (!player.IsTransitioning && playerRoom.CurrentRoom == currentRoom && TryCatchPlayer())
+                return;
+
+            float distance = Vector2.Distance(rb.position, clearancePoint);
+            if (distance < clearanceBestDistance - 0.01f)
+            {
+                clearanceBestDistance = distance;
+                clearanceLastProgressTime = Time.time;
+            }
+
+            // Um obstaculo que surgir depois do calculo nao prende o boss nesta etapa.
+            if (distance <= pointReachedDistance || Time.time - clearanceLastProgressTime >= 0.75f)
+            {
+                CancelDoorApproach();
+                resumeTime = Time.time + doorPause;
+                return;
+            }
+
+            MoveTo(clearancePoint);
+            return;
+        }
+
         if (door == null)
         {
-            phase = DoorPhase.None;
+            CancelDoorApproach();
             return;
         }
 
@@ -162,15 +296,51 @@ public class BossDoorChase : MonoBehaviour
         if (phase == DoorPhase.ToApproach)
         {
             phase = DoorPhase.ToEntry;
+            resumeTime = Time.time + doorPause;
         }
         else
         {
             currentRoom = door.DestinationRoom;
-            door = null;
-            phase = DoorPhase.None;
+            clearancePoint = GetClearancePoint();
+            clearanceBestDistance = Vector2.Distance(rb.position, clearancePoint);
+            clearanceLastProgressTime = Time.time;
+            phase = DoorPhase.ToClearance;
+            // A pausa de chegada acontece depois de sair do vao, sem parar no EntryPoint.
+        }
+    }
+
+    private Vector2 GetClearancePoint()
+    {
+        Vector2 direction = (door.EntryPosition - door.ApproachPosition).normalized;
+        Vector2 target = door.EntryPosition + direction * doorClearanceDistance;
+        if (currentRoom != null && !currentRoom.Contains(target))
+        {
+            for (int step = 9; step >= 0; step--)
+            {
+                target = door.EntryPosition + direction * (doorClearanceDistance * step / 10f);
+                if (currentRoom.Contains(target))
+                    break;
+            }
         }
 
-        resumeTime = Time.time + doorPause;
+        Vector2 travel = target - rb.position;
+        float distance = travel.magnitude;
+        if (bossCollider == null || !bossCollider.enabled || distance < 0.001f)
+            return target;
+
+        ContactFilter2D filter = new ContactFilter2D();
+        filter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
+        filter.useTriggers = false;
+        int count = bossCollider.Cast(travel.normalized, filter, clearanceHits, distance);
+        for (int i = 0; i < count; i++)
+        {
+            if (clearanceHits[i].rigidbody == rb)
+                continue;
+
+            distance = Mathf.Min(distance, Mathf.Max(0f, clearanceHits[i].distance - 0.05f));
+        }
+
+        return rb.position + travel.normalized * distance;
     }
 
     void MoveTo(Vector2 target)

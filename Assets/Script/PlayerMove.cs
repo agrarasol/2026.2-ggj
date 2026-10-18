@@ -18,6 +18,7 @@ public class PlayerMove : MonoBehaviour
 
     public bool IsTransitioning { get; private set;}
     public bool IsDefeated { get; private set; }
+    public bool IsInteracting { get; private set; }
     private bool waitForMouseRelease;
     public bool ReachedTarget => Vector2.Distance(rb.position, targetPosition) < 0.01f;
 
@@ -59,7 +60,7 @@ public class PlayerMove : MonoBehaviour
 
     void Update()
     {
-        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || Mouse.current == null) return;
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting || Mouse.current == null) return;
 
         Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
 
@@ -93,7 +94,7 @@ public class PlayerMove : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!GameFlow.CanPlay || IsDefeated)
+        if (!GameFlow.CanPlay || IsDefeated || IsInteracting)
         {
             rb.linearVelocity = Vector2.zero;
             return;
@@ -110,7 +111,7 @@ public class PlayerMove : MonoBehaviour
 
     public void BeginTransition(Vector2 destination)
     {
-        if (!GameFlow.CanPlay || IsDefeated)
+        if (!GameFlow.CanPlay || IsDefeated || IsInteracting)
             return;
 
         IsTransitioning = true;
@@ -128,9 +129,29 @@ public class PlayerMove : MonoBehaviour
         pressStartedOnUI = false;
     }
 
+    public bool TryBeginInteraction()
+    {
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting)
+            return false;
+
+        IsInteracting = true;
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
+        return true;
+    }
+
+    public void EndInteraction()
+    {
+        IsInteracting = false;
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
+        waitForMouseRelease = Mouse.current != null && Mouse.current.leftButton.isPressed;
+        pressStartedOnUI = false;
+    }
+
     public bool WantsToCrossDoor(Vector2 direction, Bounds doorwayBounds)
     {
-        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
             return false;
 
         Vector2 normal = direction.normalized;
@@ -170,6 +191,7 @@ public class PlayerMove : MonoBehaviour
     public void Defeat()
     {
         IsDefeated = true;
+        IsInteracting = false;
         IsTransitioning = false;
         targetPosition = rb.position;
         rb.linearVelocity = Vector2.zero;

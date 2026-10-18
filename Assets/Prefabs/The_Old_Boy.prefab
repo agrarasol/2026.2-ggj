@@ -192,5 +192,7 @@ MonoBehaviour:
   decisionInterval: 0.5
   chaseDuration: {x: 4, y: 8}
   doorPause: 0.4
+  doorWaitingDistance: 1.5
+  doorClearanceDistance: 1.5
   currentChance: 0
   chasing: 0
