@@ -6,6 +6,42 @@ public class DoorTransition : MonoBehaviour
 {
     private static readonly List<DoorTransition> activeDoors = new List<DoorTransition>();
 
+    public RoomZone SourceRoom => sourceRoom;
+    public RoomZone DestinationRoom => destinationRoom;
+    public Vector2 ApproachPosition => approachPoint != null ? (Vector2)approachPoint.position : (Vector2)transform.position;
+    public Vector2 EntryPosition => entryPoint != null ? (Vector2)entryPoint.position : (Vector2)transform.position;
+
+// Devolve a primeira porta do caminho mais curto entre duas salas (null se não houver caminho)
+    public static DoorTransition NextDoorTowards(RoomZone from, RoomZone to)
+    {
+        if (from == null || to == null || from == to)
+            return null;
+
+        var firstDoor = new Dictionary<RoomZone, DoorTransition>();
+        var queue = new Queue<RoomZone>();
+        firstDoor[from] = null;
+        queue.Enqueue(from);
+
+        while (queue.Count > 0)
+        {
+            RoomZone room = queue.Dequeue();
+            foreach (DoorTransition door in activeDoors)
+            {
+                if (door == null || door.sourceRoom != room || door.destinationRoom == null)
+                    continue;
+                if (firstDoor.ContainsKey(door.destinationRoom))
+                    continue;
+
+                firstDoor[door.destinationRoom] = room == from ? door : firstDoor[room];
+                    if (door.destinationRoom == to)
+                        return firstDoor[to];
+
+                queue.Enqueue(door.destinationRoom);
+            }
+    }
+        return null;
+    }
+
     [SerializeField] private RoomZone sourceRoom;
     [SerializeField] private RoomZone destinationRoom;
 
@@ -22,6 +58,7 @@ public class DoorTransition : MonoBehaviour
     private Vector2 playerStartPosition;
     private Vector3 cameraStartPosition;
     private bool reportedMissingReferences;
+
 
     private void OnEnable()
     {
