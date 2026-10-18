@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -20,6 +21,9 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject gameOverPanel;
 
+    [Header("Transicao de telas")]
+    [SerializeField] private PixelScreenTransition screenTransition;
+
     [Header("Creditos e audio de derrota")]
     [SerializeField] private GameOverSequence gameOverSequence;
 
@@ -38,7 +42,8 @@ public class GameFlow : MonoBehaviour
 
     public GameState State { get; private set; } = GameState.Menu;
     public bool IsLoading { get; private set; }
-    public bool IsPlaying => State == GameState.Playing && !IsLoading;
+    public bool IsScreenTransitioning { get; private set; }
+    public bool IsPlaying => State == GameState.Playing && !IsLoading && !IsScreenTransitioning;
     public event Action<GameState> StateChanged;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -55,6 +60,17 @@ public class GameFlow : MonoBehaviour
             gameOverSequence.Completed += FinishCredits;
         startPlaying = playAfterReload;
         playAfterReload = false;
+        if (screenTransition == null && mainMenuPanel != null)
+            screenTransition = mainMenuPanel.GetComponentInParent<Canvas>(true)?.GetComponentInChildren<PixelScreenTransition>(true);
+        if (screenTransition != null)
+        {
+            if (startPlaying && screenTransition.enabled)
+            {
+                IsScreenTransitioning = true;
+                screenTransition.ShowCovered();
+            }
+            else screenTransition.Clear();
+        }
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         Time.timeScale = 0f;
@@ -75,7 +91,7 @@ public class GameFlow : MonoBehaviour
     private void LateUpdate()
     {
         EventSystem eventSystem = EventSystem.current;
-        if (IsLoading || (State != GameState.Menu && State != GameState.GameOver) || eventSystem == null || !eventSystem.sendNavigationEvents ||
+        if (IsLoading || IsScreenTransitioning || (State != GameState.Menu && State != GameState.GameOver) || eventSystem == null || !eventSystem.sendNavigationEvents ||
             eventSystem.currentSelectedGameObject != null)
             return;
 
@@ -90,7 +106,7 @@ public class GameFlow : MonoBehaviour
 
     public void PlayGame()
     {
-        if (IsLoading || IsPlaying || State == GameState.Credits)
+        if (IsLoading || IsScreenTransitioning || IsPlaying || State == GameState.Credits)
             return;
 
         if (hasStarted)
@@ -101,7 +117,7 @@ public class GameFlow : MonoBehaviour
 
     public void ShowMainMenu()
     {
-        if (IsLoading || State == GameState.Credits)
+        if (IsLoading || IsScreenTransitioning || State == GameState.Credits)
             return;
 
         if (State == GameState.GameOver && gameOverSequence != null && gameOverSequence.isActiveAndEnabled)
@@ -122,17 +138,20 @@ public class GameFlow : MonoBehaviour
         if (IsLoading || !IsPlaying)
             return;
 
-        SetState(GameState.GameOver);
+        bool animate = screenTransition != null && screenTransition.enabled;
+        IsScreenTransitioning = animate;
+        SetState(GameState.GameOver, !animate);
         if (gameOverSequence != null)
         {
             gameOverSequence.StopSequence();
             gameOverSequence.PlayDeathSound();
         }
+        if (animate) StartCoroutine(RevealGameOver());
     }
 
     private void FinishCredits()
     {
-        if (IsLoading || State != GameState.Credits)
+        if (IsLoading || IsScreenTransitioning || State != GameState.Credits)
             return;
 
         if (gameOverSequence != null)
@@ -143,7 +162,7 @@ public class GameFlow : MonoBehaviour
 
     public void QuitGame()
     {
-        if (IsLoading)
+        if (IsLoading || IsScreenTransitioning)
             return;
 
 #if UNITY_EDITOR
@@ -155,6 +174,37 @@ public class GameFlow : MonoBehaviour
 
     private void BeginGameplay()
     {
+        if (screenTransition != null && screenTransition.enabled)
+            StartCoroutine(RevealGameplay());
+        else
+            ActivateGameplay();
+    }
+
+    private IEnumerator RevealGameplay()
+    {
+        IsScreenTransitioning = true;
+        Time.timeScale = 0f;
+        if (!startPlaying) yield return screenTransition.Cover();
+        if (gameOverSequence != null) gameOverSequence.StopSequence();
+        SetPanels(false, false);
+        yield return screenTransition.Reveal();
+        screenTransition.Clear();
+        IsScreenTransitioning = false;
+        ActivateGameplay();
+    }
+
+    private IEnumerator RevealGameOver()
+    {
+        yield return screenTransition.Cover();
+        SetPanels(false, true);
+        yield return screenTransition.Reveal();
+        screenTransition.Clear();
+        IsScreenTransitioning = false;
+    }
+
+    private void ActivateGameplay()
+    {
+        IsScreenTransitioning = false;
         hasStarted = true;
         if (gameOverSequence != null)
             gameOverSequence.StopSequence();
@@ -164,6 +214,22 @@ public class GameFlow : MonoBehaviour
 
     private void RestartGameplay()
     {
+        if (screenTransition != null && screenTransition.enabled)
+            StartCoroutine(CoverAndRestart());
+        else
+            LoadGameplayScene();
+    }
+
+    private IEnumerator CoverAndRestart()
+    {
+        IsScreenTransitioning = true;
+        Time.timeScale = 0f;
+        yield return screenTransition.Cover();
+        LoadGameplayScene();
+    }
+
+    private void LoadGameplayScene()
+    {
         Scene scene = gameObject.scene;
 
         IsLoading = true;
@@ -172,7 +238,8 @@ public class GameFlow : MonoBehaviour
                 button.interactable = false;
 
         playAfterReload = true;
-        Time.timeScale = 1f;
+        if (screenTransition != null) screenTransition.PreserveForReload();
+        Time.timeScale = 0f;
         SceneManager.LoadSceneAsync(scene.buildIndex, LoadSceneMode.Single);
     }
 
@@ -187,12 +254,13 @@ public class GameFlow : MonoBehaviour
             EventSystem.current.SetSelectedGameObject(null);
     }
 
-    private void SetState(GameState state)
+    private void SetState(GameState state, bool updatePanels = true)
     {
         bool changed = State != state;
         State = state;
-        Time.timeScale = state == GameState.Playing ? 1f : 0f;
-        SetPanels(state == GameState.Menu, state == GameState.GameOver);
+        Time.timeScale = state == GameState.Playing && !IsScreenTransitioning ? 1f : 0f;
+        if (updatePanels) SetPanels(state == GameState.Menu, state == GameState.GameOver);
+        else if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
 
         if (changed)
             StateChanged?.Invoke(state);
