@@ -17,6 +17,7 @@ public class PlayerMove : MonoBehaviour
     private bool pressStartedOnUI;
 
     public bool IsTransitioning { get; private set;}
+    public bool IsDefeated { get; private set; }
     private bool waitForMouseRelease;
     public bool ReachedTarget => Vector2.Distance(rb.position, targetPosition) < 0.01f;
 
@@ -34,7 +35,7 @@ public class PlayerMove : MonoBehaviour
 
     void Update()
     {
-        if (IsTransitioning || Mouse.current == null) return;
+        if (IsDefeated || IsTransitioning || Mouse.current == null) return;
 
         Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
 
@@ -68,6 +69,12 @@ public class PlayerMove : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (IsDefeated)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
         // MoveTowards já para exatamente no destino, então não treme
         Vector2 newPos = Vector2.MoveTowards(rb.position, targetPosition, speed * Time.fixedDeltaTime);
 
@@ -79,6 +86,9 @@ public class PlayerMove : MonoBehaviour
 
     public void BeginTransition(Vector2 destination)
     {
+        if (IsDefeated)
+            return;
+
         IsTransitioning = true;
         rb.linearVelocity = Vector2.zero;
         targetPosition = destination;
@@ -96,7 +106,7 @@ public class PlayerMove : MonoBehaviour
 
     public bool WantsToCrossDoor(Vector2 direction, Bounds doorwayBounds)
     {
-        if (IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
+        if (IsDefeated || IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
             return false;
 
         Vector2 normal = direction.normalized;
@@ -131,5 +141,13 @@ public class PlayerMove : MonoBehaviour
     {
         rb.position = position;
         EndTransition();
+    }
+
+    public void Defeat()
+    {
+        IsDefeated = true;
+        IsTransitioning = false;
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
     }
 }

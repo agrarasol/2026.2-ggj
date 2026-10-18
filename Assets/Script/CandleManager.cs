@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 public class CandleManager : MonoBehaviour
 {
@@ -39,7 +40,8 @@ public class CandleManager : MonoBehaviour
     [SerializeField, Range(0.01f, 1f)] private float minVolumeMultiplier = 0.2f;
 
     [Header("Eventos")]
-    [SerializeField] private UnityEvent onTimeExpired;
+    [FormerlySerializedAs("onTimeExpired")]
+    [SerializeField] private UnityEvent onGameOver = new UnityEvent();
 
     private Candle activeCandle;
 
@@ -52,6 +54,7 @@ public class CandleManager : MonoBehaviour
     public Candle ActiveCandle => activeCandle;
     public float RemainingTime => remainingTime;
     public float InteractionDistance => interactionDistance;
+    public bool IsGameOver => gameOver;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private void Start()
@@ -88,7 +91,7 @@ public class CandleManager : MonoBehaviour
 
     private void TryExtinguishCandle()
     {
-        if (activeCandle != null)
+        if (gameOver || activeCandle != null || candles == null)
             return;
         
         if(roomTracker == null|| roomTracker.CurrentRoom == null)
@@ -223,6 +226,16 @@ public class CandleManager : MonoBehaviour
 
     private void HandleTimeExpired()
     {
+        Debug.Log("Tempo esgotado!");
+        LoseGame();
+    }
+
+    [ContextMenu("DEBUG/Perder jogo")]
+    public void LoseGame()
+    {
+        if (gameOver)
+            return;
+
         gameOver = true;
 
         if (beepSource != null)
@@ -230,21 +243,25 @@ public class CandleManager : MonoBehaviour
             beepSource.Stop();
         }
 
-        Debug.Log("Tempo esgotado!");
+        if (player != null && player.TryGetComponent(out PlayerMove movement))
+            movement.Defeat();
 
-        onTimeExpired?.Invoke();
+        Debug.Log("Voce perdeu!", this);
+        onGameOver?.Invoke();
     }
 
     [ContextMenu("DEBUG/Apagar vela agora")]
     private void DebugExtinguish()
     {
+        if (gameOver)
+            return;
+
         if (activeCandle != null)
         {
             activeCandle.SetLit(true);
             activeCandle = null;
         }
 
-        gameOver = false;
         remainingTime = 0f;
         beepTimer = 0f;
 
@@ -259,7 +276,7 @@ public class CandleManager : MonoBehaviour
     [ContextMenu("DEBUG/Reacender vela")]
     private void DebugRelight()
     {
-        if (activeCandle == null)
+        if (gameOver || activeCandle == null)
             return;
 
         activeCandle.SetLit(true);
@@ -272,8 +289,6 @@ public class CandleManager : MonoBehaviour
         {
             beepSource.Stop();
         }
-
-        gameOver = false;
 
         ScheduleNextExtinguish();
     }

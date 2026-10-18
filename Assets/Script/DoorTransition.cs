@@ -53,8 +53,6 @@ public class DoorTransition : MonoBehaviour
         if (nearestDoor == null)
             return false;
 
-        // Bloqueia o passo normal mesmo se faltar alguma referencia da porta.
-        // Nesse caso o jogador para antes da passagem e recebe um aviso.
         body.linearVelocity = Vector2.zero;
         nearestDoor.TryBeginTransition(playerMove, tracker);
         return true;
@@ -108,6 +106,7 @@ public class DoorTransition : MonoBehaviour
     {
         return isActiveAndEnabled && transitioningPlayer == null &&
             playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsTransitioning &&
+            !playerMove.IsDefeated &&
             tracker != null && tracker.CurrentRoom == sourceRoom;
     }
 
@@ -162,8 +161,6 @@ public class DoorTransition : MonoBehaviour
         if (!CanStartTransition(playerMove, playerTracker) || !HasReferences())
             return;
 
-        // Stay permite voltar sem sair do gatilho, mas o clique precisa
-        // apontar para a abertura e alcancar a entrada desta porta.
         Vector2 crossingDirection = entryPoint.position - approachPoint.position;
         Collider2D doorway = GetComponent<Collider2D>();
         if (doorway == null || !playerMove.WantsToCrossDoor(crossingDirection, doorway.bounds))
@@ -189,14 +186,17 @@ public class DoorTransition : MonoBehaviour
             float elapsed = 0f;
             float timeout = Mathf.Max(movementTimeout, 0.1f);
 
-            while (playerMove != null && playerMove.isActiveAndEnabled &&
+            while (playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                    !playerMove.ReachedTarget && elapsed < timeout)
             {
                 elapsed += Time.deltaTime;
                 yield return null;
             }
 
-            if (playerMove == null || !playerMove.isActiveAndEnabled || !playerMove.ReachedTarget)
+            if (playerMove == null || playerMove.IsDefeated)
+                yield break;
+
+            if (!playerMove.isActiveAndEnabled || !playerMove.ReachedTarget)
             {
                 Debug.LogWarning("Nao foi possivel alinhar o jogador com a porta.", this);
                 yield break;
@@ -211,7 +211,7 @@ public class DoorTransition : MonoBehaviour
             float duration = Mathf.Max(transitionDuration, 0.01f);
             timeout = Mathf.Max(timeout, duration);
 
-            while (playerMove != null && playerMove.isActiveAndEnabled &&
+            while (playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                    transitioningCamera != null &&
                    (elapsed < duration || !playerMove.ReachedTarget))
             {
@@ -229,7 +229,7 @@ public class DoorTransition : MonoBehaviour
                 yield return null;
             }
 
-            completed = playerMove != null && playerMove.isActiveAndEnabled &&
+            completed = playerMove != null && playerMove.isActiveAndEnabled && !playerMove.IsDefeated &&
                 playerMove.ReachedTarget && transitioningCamera != null;
 
             if (completed)
@@ -243,7 +243,9 @@ public class DoorTransition : MonoBehaviour
 
     private void FinishTransition(bool completed)
     {
-        if (transitioningPlayer != null)
+        bool defeated = transitioningPlayer != null && transitioningPlayer.IsDefeated;
+
+        if (transitioningPlayer != null && !defeated)
         {
             if (completed)
                 transitioningPlayer.EndTransition();
@@ -255,7 +257,7 @@ public class DoorTransition : MonoBehaviour
                 transitioningTracker.EnterRoom(room);
         }
 
-        if (!completed && transitioningCamera != null)
+        if (!completed && !defeated && transitioningCamera != null)
             transitioningCamera.position = cameraStartPosition;
 
         transitioningPlayer = null;
