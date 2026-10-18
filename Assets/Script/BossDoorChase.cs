@@ -86,6 +86,7 @@ public class BossDoorChase : MonoBehaviour
             {
                 chasing = true;
                 chaseEndTime = Time.time + Random.Range(chaseDuration.x, chaseDuration.y);
+                TutorialManager.CallChaseTutorial();
             }
         }
     }
