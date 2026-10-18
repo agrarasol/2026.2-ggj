@@ -1,10 +1,12 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class TutorialUI : MonoBehaviour
 {
     public static TutorialUI instance;
+    public CanvasGroup panel;
     public TMP_Text text;
 
     [SerializeField] private float fadeDuration = 1.0f;
@@ -45,34 +47,21 @@ public class TutorialUI : MonoBehaviour
     private IEnumerator Fade(float startAlpha, float endAlpha)
     {
         float delta = 0.0f;
-        SetAlpha(startAlpha);
+        panel.alpha = startAlpha;
 
         while (delta < fadeDuration)
         {
             delta += Time.deltaTime;
 
-            float a =  Mathf.Lerp(
+            panel.alpha =  Mathf.Lerp(
                 startAlpha,
                 endAlpha,
                 delta / fadeDuration
             );
 
-            SetAlpha(a);
             yield return null;
         }
 
-        SetAlpha(endAlpha);
-    }
-
-    private void SetAlpha(float alpha)
-    {
-        if (text == null)
-        {
-            return;
-        }
-
-        Color color = text.color;
-        color.a = alpha;
-        text.color = color;
+        panel.alpha = endAlpha;
     }
 }
