@@ -20,7 +20,9 @@ public class PlayerMove : MonoBehaviour
     public bool IsDefeated { get; private set; }
     public bool IsInteracting { get; private set; }
     private bool waitForMouseRelease;
+    private int consumedMouseFrame = -1;
     public bool ReachedTarget => Vector2.Distance(rb.position, targetPosition) < 0.01f;
+    public Vector2 MovementDirection => (targetPosition - rb.position).normalized;
 
     void Awake()
     {
@@ -60,7 +62,8 @@ public class PlayerMove : MonoBehaviour
 
     void Update()
     {
-        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting || Mouse.current == null) return;
+        if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting ||
+            consumedMouseFrame == Time.frameCount || Mouse.current == null) return;
 
         Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
 
@@ -118,6 +121,15 @@ public class PlayerMove : MonoBehaviour
         IsTransitioning = true;
         rb.linearVelocity = Vector2.zero;
         targetPosition = destination;
+    }
+
+    public void ConsumeMovementClick()
+    {
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
+        consumedMouseFrame = Time.frameCount;
+        waitForMouseRelease = true;
+        pressStartedOnUI = false;
     }
 
     public void EndTransition()

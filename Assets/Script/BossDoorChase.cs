@@ -48,6 +48,8 @@ public class BossDoorChase : MonoBehaviour
     private float clearanceBestDistance;
     private float clearanceLastProgressTime;
     private readonly RaycastHit2D[] clearanceHits = new RaycastHit2D[16];
+    private Vector2 passageApproach;
+    private Vector2 passageEntry;
 
     void Awake()
     {
@@ -158,7 +160,11 @@ public class BossDoorChase : MonoBehaviour
 
         door = DoorTransition.NextDoorTowards(currentRoom, targetRoom);
         if (door != null)
+        {
+            passageApproach = door.GetApproachPosition(rb.position);
+            passageEntry = door.GetEntryPosition(rb.position);
             phase = DoorPhase.ToApproach;
+        }
     }
 
     void ChasePlayer()
@@ -214,8 +220,9 @@ public class BossDoorChase : MonoBehaviour
     {
         if (door == null)
             return false;
+        if (door.PassageType == RoomPassageType.Stairs) return false;
 
-        Vector2 direction = door.EntryPosition - door.ApproachPosition;
+        Vector2 direction = door.PassageDirection;
         if (direction.sqrMagnitude < 0.0001f)
             return false;
 
@@ -234,8 +241,8 @@ public class BossDoorChase : MonoBehaviour
             return;
         }
 
-        Vector2 direction = (door.EntryPosition - door.ApproachPosition).normalized;
-        Vector2 waitingPoint = door.ApproachPosition - direction * doorWaitingDistance;
+        Vector2 direction = door.PassageDirection;
+        Vector2 waitingPoint = passageApproach - direction * doorWaitingDistance;
         float retreat = Vector2.Dot(rb.position - waitingPoint, direction);
         if (retreat > pointReachedDistance)
         {
@@ -288,7 +295,16 @@ public class BossDoorChase : MonoBehaviour
             return;
         }
 
-        Vector2 target = phase == DoorPhase.ToApproach ? door.ApproachPosition : door.EntryPosition;
+        if (phase == DoorPhase.ToEntry && door.PassageType == RoomPassageType.Stairs)
+        {
+            rb.position = passageEntry;
+            transform.position = new Vector3(passageEntry.x, passageEntry.y, transform.position.z);
+            currentRoom = door.DestinationRoom;
+            StartClearance();
+            return;
+        }
+
+        Vector2 target = phase == DoorPhase.ToApproach ? passageApproach : passageEntry;
         MoveTo(target);
 
         if (Vector2.Distance(rb.position, target) > pointReachedDistance)
@@ -297,28 +313,33 @@ public class BossDoorChase : MonoBehaviour
         if (phase == DoorPhase.ToApproach)
         {
             phase = DoorPhase.ToEntry;
-            resumeTime = Time.time + doorPause;
+            resumeTime = Time.time + (door.PassageType == RoomPassageType.Stairs ? door.StairDuration : doorPause);
         }
         else
         {
             currentRoom = door.DestinationRoom;
-            clearancePoint = GetClearancePoint();
-            clearanceBestDistance = Vector2.Distance(rb.position, clearancePoint);
-            clearanceLastProgressTime = Time.time;
-            phase = DoorPhase.ToClearance;
+            StartClearance();
             // A pausa de chegada acontece depois de sair do vao, sem parar no EntryPoint.
         }
     }
 
+    private void StartClearance()
+    {
+        clearancePoint = GetClearancePoint();
+        clearanceBestDistance = Vector2.Distance(rb.position, clearancePoint);
+        clearanceLastProgressTime = Time.time;
+        phase = DoorPhase.ToClearance;
+    }
+
     private Vector2 GetClearancePoint()
     {
-        Vector2 direction = (door.EntryPosition - door.ApproachPosition).normalized;
-        Vector2 target = door.EntryPosition + direction * doorClearanceDistance;
+        Vector2 direction = door.ArrivalDirection;
+        Vector2 target = passageEntry + direction * doorClearanceDistance;
         if (currentRoom != null && !currentRoom.Contains(target))
         {
             for (int step = 9; step >= 0; step--)
             {
-                target = door.EntryPosition + direction * (doorClearanceDistance * step / 10f);
+                target = passageEntry + direction * (doorClearanceDistance * step / 10f);
                 if (currentRoom.Contains(target))
                     break;
             }

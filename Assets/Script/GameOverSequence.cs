@@ -3,6 +3,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(AudioSource))]
@@ -11,7 +12,8 @@ public class GameOverSequence : MonoBehaviour
     [Header("Painel (Canvas)")]
     [SerializeField] private CanvasGroup panel;            // painel preto que cobre a tela
     [SerializeField] private RectTransform creditsContent; // texto dos créditos
-    [SerializeField] private GameObject restartHint;       // "Aperte R pra reiniciar" (opcional)
+    [FormerlySerializedAs("restartHint")]
+    [SerializeField] private GameObject skipHint;
 
     [Header("Logos finais")]
     [SerializeField] private CanvasGroup logosGroup;       // logo do jogo + logo da empresa
@@ -24,17 +26,14 @@ public class GameOverSequence : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float volume = 0.8f;
 
     [Header("Tempos")]
-    [SerializeField, Min(0f)] private float delayBeforeFade = 1.5f;
     [SerializeField, Min(0.1f)] private float fadeDuration = 1.5f;
     [SerializeField, Min(10f)] private float scrollSpeed = 60f;
 
     private bool started;
-    private bool canRestart;
     private AudioClip fallbackClip;
 
     public bool IsRunning => started && !IsComplete;
     public bool IsComplete { get; private set; }
-    public bool CanRestart => canRestart;
     public event Action Completed;
 
     private void Awake()
@@ -56,14 +55,14 @@ public class GameOverSequence : MonoBehaviour
             panel.gameObject.SetActive(false);
         }
         if (logosGroup != null) logosGroup.alpha = 0f;
-        if (restartHint != null) restartHint.SetActive(false);
+        if (skipHint != null) skipHint.SetActive(false);
     }
 
-    // O GameFlow chama Play depois de entrar no estado GameOver.
+    // Os creditos aparecem somente ao voltar do Game Over para o menu.
     public void Play()
     {
         if (started || GameFlow.Instance == null || GameFlow.Instance.IsLoading ||
-            GameFlow.Instance.State != GameState.GameOver)
+            GameFlow.Instance.State != GameState.Credits)
             return;
 
         started = true;
@@ -73,15 +72,8 @@ public class GameOverSequence : MonoBehaviour
 
     private IEnumerator Sequence()
     {
-        // 1. som de morte (ou tom provisório se não tiver clip)
-        if (deathClip == null && fallbackClip == null)
-            fallbackClip = MakeFallbackTone();
-
-        audioSource.PlayOneShot(deathClip != null ? deathClip : fallbackClip, volume);
-
         if (creditsContent != null) creditsContent.gameObject.SetActive(false);
-
-        yield return new WaitForSecondsRealtime(delayBeforeFade);
+        if (skipHint != null) skipHint.SetActive(true);
 
         // 2. escurece a tela
         if (panel != null)
@@ -96,9 +88,6 @@ public class GameOverSequence : MonoBehaviour
             }
             panel.alpha = 1f;
         }
-
-        canRestart = true;
-        if (restartHint != null) restartHint.SetActive(true);
 
         // 3. créditos sobem até sair da tela
         if (creditsContent != null)
@@ -136,6 +125,7 @@ public class GameOverSequence : MonoBehaviour
                 yield return null;
             }
             logosGroup.alpha = 1f;
+            yield return new WaitForSecondsRealtime(1.5f);
         }
 
         IsComplete = true;
@@ -144,12 +134,28 @@ public class GameOverSequence : MonoBehaviour
 
     private void Update()
     {
-        if (!canRestart || Keyboard.current == null || GameFlow.Instance == null ||
-            GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.GameOver)
+        if (!IsRunning || Keyboard.current == null || GameFlow.Instance == null ||
+            GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.Credits)
             return;
 
-        if (Keyboard.current.rKey.wasPressedThisFrame)
-            GameFlow.Instance.PlayGame();
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame)
+            Skip();
+    }
+
+    public void PlayDeathSound()
+    {
+        if (audioSource == null) return;
+        if (deathClip == null && fallbackClip == null) fallbackClip = MakeFallbackTone();
+        audioSource.PlayOneShot(deathClip != null ? deathClip : fallbackClip, volume);
+    }
+
+    public void Skip()
+    {
+        if (!IsRunning || GameFlow.Instance == null || GameFlow.Instance.State != GameState.Credits) return;
+        StopAllCoroutines();
+        IsComplete = true;
+        Completed?.Invoke();
     }
 
     public void StopSequence()
@@ -159,7 +165,6 @@ public class GameOverSequence : MonoBehaviour
             audioSource.Stop();
 
         started = false;
-        canRestart = false;
         IsComplete = false;
         HidePanel();
     }

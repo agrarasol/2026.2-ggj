@@ -9,7 +9,8 @@ public enum GameState
 {
     Menu,
     Playing,
-    GameOver
+    GameOver,
+    Credits
 }
 
 [DefaultExecutionOrder(-100)]
@@ -19,7 +20,7 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject gameOverPanel;
 
-    [Header("Sequencia de derrota")]
+    [Header("Creditos e audio de derrota")]
     [SerializeField] private GameOverSequence gameOverSequence;
 
     [Header("Botoes")]
@@ -51,7 +52,7 @@ public class GameFlow : MonoBehaviour
     {
         Instance = this;
         if (gameOverSequence != null)
-            gameOverSequence.Completed += ShowGameOverOptions;
+            gameOverSequence.Completed += FinishCredits;
         startPlaying = playAfterReload;
         playAfterReload = false;
         Cursor.lockState = CursorLockMode.None;
@@ -74,7 +75,7 @@ public class GameFlow : MonoBehaviour
     private void LateUpdate()
     {
         EventSystem eventSystem = EventSystem.current;
-        if (IsLoading || IsPlaying || eventSystem == null || !eventSystem.sendNavigationEvents ||
+        if (IsLoading || (State != GameState.Menu && State != GameState.GameOver) || eventSystem == null || !eventSystem.sendNavigationEvents ||
             eventSystem.currentSelectedGameObject != null)
             return;
 
@@ -89,7 +90,7 @@ public class GameFlow : MonoBehaviour
 
     public void PlayGame()
     {
-        if (IsLoading || IsPlaying)
+        if (IsLoading || IsPlaying || State == GameState.Credits)
             return;
 
         if (hasStarted)
@@ -100,8 +101,15 @@ public class GameFlow : MonoBehaviour
 
     public void ShowMainMenu()
     {
-        if (IsLoading)
+        if (IsLoading || State == GameState.Credits)
             return;
+
+        if (State == GameState.GameOver && gameOverSequence != null && gameOverSequence.isActiveAndEnabled)
+        {
+            SetState(GameState.Credits);
+            gameOverSequence.Play();
+            return;
+        }
 
         if (gameOverSequence != null)
             gameOverSequence.StopSequence();
@@ -115,22 +123,22 @@ public class GameFlow : MonoBehaviour
             return;
 
         SetState(GameState.GameOver);
-
-        if (gameOverSequence != null && gameOverSequence.isActiveAndEnabled)
-            gameOverSequence.Play();
-        else
-            ShowGameOverOptions();
+        if (gameOverSequence != null)
+        {
+            gameOverSequence.StopSequence();
+            gameOverSequence.PlayDeathSound();
+        }
     }
 
-    private void ShowGameOverOptions()
+    private void FinishCredits()
     {
-        if (IsLoading || State != GameState.GameOver)
+        if (IsLoading || State != GameState.Credits)
             return;
 
         if (gameOverSequence != null)
-            gameOverSequence.HidePanel();
+            gameOverSequence.StopSequence();
 
-        SetPanels(false, true);
+        SetState(GameState.Menu);
     }
 
     public void QuitGame()
@@ -184,7 +192,7 @@ public class GameFlow : MonoBehaviour
         bool changed = State != state;
         State = state;
         Time.timeScale = state == GameState.Playing ? 1f : 0f;
-        SetPanels(state == GameState.Menu, false);
+        SetPanels(state == GameState.Menu, state == GameState.GameOver);
 
         if (changed)
             StateChanged?.Invoke(state);
@@ -193,7 +201,7 @@ public class GameFlow : MonoBehaviour
     private void OnDestroy()
     {
         if (gameOverSequence != null)
-            gameOverSequence.Completed -= ShowGameOverOptions;
+            gameOverSequence.Completed -= FinishCredits;
 
         if (Instance == this)
             Instance = null;
