@@ -87,7 +87,10 @@ public class HiddenEnemy : MonoBehaviour
         }
 
         if (Time.time >= nextAppearanceTime && !TryAppear())
+        {
             nextAppearanceTime = Time.time + 1f;
+            TutorialManager.CallHidenTutorial();
+        }
     }
 
     public bool TryAppear()
