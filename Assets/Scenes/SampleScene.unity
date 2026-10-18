@@ -119,6 +119,17 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &11613346 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1789654204294664372, guid: ba7cca9eddb61b749b4ca18782da2a0a, type: 3}
+  m_PrefabInstance: {fileID: 2233595719398578497}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
 --- !u!1 &26337332
 GameObject:
   m_ObjectHideFlags: 0
@@ -1523,8 +1534,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0, z: -10}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.00691998, y: 10.945351, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1809,6 +1820,7 @@ GameObject:
   - component: {fileID: 2107300000}
   - component: {fileID: 646683682}
   - component: {fileID: 646683681}
+  - component: {fileID: 2107500000}
   m_Layer: 0
   m_Name: GameFlow
   m_TagString: Untagged
@@ -5340,6 +5352,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1445766027}
   m_CullTransparentMesh: 1
+--- !u!114 &1449233152 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8190467688015954822, guid: b69a038be1fb9f74b9ee6e799fa90f38, type: 3}
+  m_PrefabInstance: {fileID: 5713936509523749689}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
 --- !u!1 &1462479223
 GameObject:
   m_ObjectHideFlags: 0
@@ -5760,6 +5783,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19eb7272781b5114d9b412e06aa1c48a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Candle
+--- !u!114 &1591327651 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1232420745933822089, guid: 0a6e22925e9bf7640a66dba0f4129414, type: 3}
+  m_PrefabInstance: {fileID: 755469033}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
 --- !u!1 &1615945804
 GameObject:
   m_ObjectHideFlags: 0
@@ -6035,11 +6069,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5579602156932449059, guid: c49fb732346c38f4a8ec076885b6fea6, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.08
+      value: -3.43
       objectReference: {fileID: 0}
     - target: {fileID: 5579602156932449059, guid: c49fb732346c38f4a8ec076885b6fea6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -3.21
+      value: 14.07
       objectReference: {fileID: 0}
     - target: {fileID: 5579602156932449059, guid: c49fb732346c38f4a8ec076885b6fea6, type: 3}
       propertyPath: m_LocalPosition.z
@@ -13166,6 +13200,17 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
+--- !u!114 &2082355614 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 15447352228713452, guid: ba7cca9eddb61b749b4ca18782da2a0a, type: 3}
+  m_PrefabInstance: {fileID: 2233595719398578497}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
 --- !u!1 &2107000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -13214,12 +13259,14 @@ MonoBehaviour:
   player: {fileID: 2107000500}
   roomTracker: {fileID: 686619567}
   hidingSpots:
-  - {fileID: 0}
+  - {fileID: 1591327651}
   - {fileID: 1179448680}
+  - {fileID: 2114324547}
+  - {fileID: 2082355614}
+  - {fileID: 11613346}
   - {fileID: 813818093}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 813818093}
+  - {fileID: 1449233152}
+  - {fileID: 2133689732}
   enemyPrefab: {fileID: 100000, guid: 007a9605a8bf48ecb4c516a270f787a8, type: 3}
   minWaitTime: 15
   maxWaitTime: 25
@@ -13563,6 +13610,81 @@ MonoBehaviour:
   coverDuration: 0.45
   revealDuration: 0.55
   minimumColumns: 4
+--- !u!114 &2107500000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 646683678}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46dbfa8685894540a915c22286b5898b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SoundSystem
+  gameFlow: {fileID: 646683679}
+  player: {fileID: 2107000500}
+  boss: {fileID: 2107500001}
+  hiddenEnemy: {fileID: 2107000002}
+  masterVolume: 1
+  effectsVolume: 1
+  musicVolume: 0.3
+  gameplayMusic: {fileID: 8300000, guid: 7d7c90b8d8597ef40a5df6b53647373d, type: 3}
+  creditsMusic: {fileID: 8300000, guid: cf14f3abbd6be5b47acbbde3cb6ed538, type: 3}
+  musicFadeDuration: 0.6
+  caneSound: {fileID: 8300000, guid: d5cae5735b8c9574e9a6e05286cafef5, type: 3}
+  caneVolume: 0.6
+  caneStepInterval: 0.65
+  caneStartTime: 0.42
+  bossStepSound: {fileID: 8300000, guid: 37509036705ceae4681d4bb0f8e858f6, type: 3}
+  bossGruntSound: {fileID: 8300000, guid: 48acd883a7a5d624ea2d735ab041d2f8, type: 3}
+  bossStepVolume: 0.65
+  bossGruntVolume: 0.7
+  bossStepInterval: 0.38
+  bossGruntInterval: {x: 3, y: 7}
+  hiddenCrySound: {fileID: 8300000, guid: b1df53278442b8d439153ed62e11b4e6, type: 3}
+  hiddenCryVolume: 0.7
+  ambientSounds:
+  - {fileID: 8300000, guid: 00b45bdcf95b6b1498faa4fabde0829f, type: 3}
+  ambientVolume: 0.4
+  ambientInterval: {x: 12, y: 25}
+  nearDistance: 2
+  farDistance: 18
+  stereoRange: 8
+  otherRoomVolume: 0.35
+--- !u!114 &2107500001 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2278091334758106473, guid: 1f707f2acb1e6804899f582ce06ced8a, type: 3}
+  m_PrefabInstance: {fileID: 5340075985986463420}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 454dfb6eab7e1d94f88dff6586959286, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossDoorChase
+--- !u!114 &2114324547 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2034152958136088517, guid: b69a038be1fb9f74b9ee6e799fa90f38, type: 3}
+  m_PrefabInstance: {fileID: 5713936509523749689}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
+--- !u!114 &2133689732 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3034366941390859491, guid: b69a038be1fb9f74b9ee6e799fa90f38, type: 3}
+  m_PrefabInstance: {fileID: 5713936509523749689}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55fdd430f4414211bacec02629747145, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyHidingSpot
 --- !u!1 &2136182032
 GameObject:
   m_ObjectHideFlags: 0

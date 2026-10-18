@@ -147,6 +147,7 @@ public class GameOverSequence : MonoBehaviour
     {
         if (audioSource == null) return;
         if (deathClip == null && fallbackClip == null) fallbackClip = MakeFallbackTone();
+        audioSource.volume = SoundSystem.EffectsGain;
         audioSource.PlayOneShot(deathClip != null ? deathClip : fallbackClip, volume);
     }
 

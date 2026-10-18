@@ -33,6 +33,9 @@ public class BossDoorChase : MonoBehaviour
     [SerializeField] private float currentChance;
     [SerializeField] private bool chasing;
 
+    public bool IsChasing => chasing;
+    public RoomZone CurrentRoom => currentRoom;
+
     private enum DoorPhase { None, ToApproach, ToEntry, ToClearance }
 
     private Rigidbody2D rb;

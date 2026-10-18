@@ -207,6 +207,7 @@ public class CandleManager : MonoBehaviour
             proximity * proximity
         );
 
+        beepSource.volume = SoundSystem.EffectsGain;
         beepSource.PlayOneShot(beepClip, beepVolume * volumeMultiplier);
     }
     
