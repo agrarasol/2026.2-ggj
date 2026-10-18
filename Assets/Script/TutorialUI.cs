@@ -5,7 +5,7 @@ using UnityEngine;
 public class TutorialUI : MonoBehaviour
 {
     public static TutorialUI instance;
-    public static TMP_Text text;
+    public TMP_Text text;
 
     [SerializeField] private float fadeDuration = 1.0f;
     [SerializeField] private float textDuration = 3.0f;
@@ -15,10 +15,14 @@ public class TutorialUI : MonoBehaviour
     void Awake()
     {
         instance = this;
-        text = GetComponent<TMP_Text>();
     }
 
-    public static void ShowMensage(string message)
+    void Start()
+    {
+        TutorialManager.CallStartTutorial(); // Chama tutorial inicial do jogo
+    }
+
+    public void ShowMensage(string message)
     {
         if (instance == null)
         {

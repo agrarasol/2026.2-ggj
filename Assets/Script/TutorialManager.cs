@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class TutorialManager : MonoBehaviour
 {
-    private const string START_TEXT = "Clique com o mouse para se mover\nProcure por itens para aumentar o tempo";
+    private const string START_TEXT = "Clique com o mouse para se mover";
     private const string CHASE_TEXT = "Cuidado com o perseguidor...";
-    private const string CANDLE_TEXT = "Vá para a vela apagada e acenda com 'E', senão...";
+    private const string CANDLE_TEXT = "Vá para a vela apagada e acenda clicando nele, senão...";
     private const string HIDEN_TEXT = "Evite aquele que se esconde pelos móveis...";
 
     public static bool startingTutorial;        // Se moveu a primeira vez? Mostra mensagem
@@ -28,7 +28,7 @@ public class TutorialManager : MonoBehaviour
         }
 
         Debug.Log("Tutorial: Mensagem inicial");
-        TutorialUI.ShowMensage(START_TEXT);
+        TutorialUI.instance.ShowMensage(START_TEXT);
         startingTutorial = true;
     }
 
@@ -40,7 +40,7 @@ public class TutorialManager : MonoBehaviour
         }
 
         Debug.Log("Tutorial: Inimigo perseguidor");
-        TutorialUI.ShowMensage(CHASE_TEXT);
+        TutorialUI.instance.ShowMensage(CHASE_TEXT);
         chaseEnemyTutorial = true;
     }
 
@@ -53,7 +53,7 @@ public class TutorialManager : MonoBehaviour
         }
 
         Debug.Log("Tutorial: Inimigo vela");
-        TutorialUI.ShowMensage(CANDLE_TEXT);
+        TutorialUI.instance.ShowMensage(CANDLE_TEXT);
         candleEnemyTutorial = true;
     }
 
@@ -65,7 +65,7 @@ public class TutorialManager : MonoBehaviour
         }
 
         Debug.Log("Tutorial: Inimigo escondido");
-        TutorialUI.ShowMensage(HIDEN_TEXT);
+        TutorialUI.instance.ShowMensage(HIDEN_TEXT);
         hidenEnemyTutorial = true;
     }
 }
