@@ -16,6 +16,10 @@ public class PlayerMove : MonoBehaviour
     private Vector2 targetPosition;
     private bool pressStartedOnUI;
 
+    public bool IsTransitioning { get; private set;}
+    private bool waitForMouseRelease;
+    public bool ReachedTarget => Vector2.Distance(rb.position, targetPosition) < 0.01f;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -30,9 +34,18 @@ public class PlayerMove : MonoBehaviour
 
     void Update()
     {
-        if (Mouse.current == null) return;
+        if (IsTransitioning || Mouse.current == null) return;
 
         Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+
+        if(waitForMouseRelease)
+        {
+            if (Mouse.current.leftButton.isPressed &&
+                !Mouse.current.leftButton.wasPressedThisFrame)
+                return;
+            
+            waitForMouseRelease = false;
+        }
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
@@ -57,6 +70,66 @@ public class PlayerMove : MonoBehaviour
     {
         // MoveTowards já para exatamente no destino, então não treme
         Vector2 newPos = Vector2.MoveTowards(rb.position, targetPosition, speed * Time.fixedDeltaTime);
+
+        if (!IsTransitioning && DoorTransition.TryHandleCrossing(this, rb, newPos))
+            return;
+
         rb.MovePosition(newPos);
+    }
+
+    public void BeginTransition(Vector2 destination)
+    {
+        IsTransitioning = true;
+        rb.linearVelocity = Vector2.zero;
+        targetPosition = destination;
+    }
+
+    public void EndTransition()
+    {
+        targetPosition = rb.position;
+        rb.linearVelocity = Vector2.zero;
+
+        IsTransitioning = false;
+        waitForMouseRelease = Mouse.current != null && Mouse.current.leftButton.isPressed;
+        pressStartedOnUI = false;
+    }
+
+    public bool WantsToCrossDoor(Vector2 direction, Bounds doorwayBounds)
+    {
+        if (IsTransitioning || waitForMouseRelease || direction.sqrMagnitude < 0.0001f)
+            return false;
+
+        Vector2 normal = direction.normalized;
+        Vector2 tangent = new Vector2(-normal.y, normal.x);
+        Vector2 movement = targetPosition - rb.position;
+        float forward = Vector2.Dot(movement, normal);
+        float sideways = Mathf.Abs(Vector2.Dot(movement, tangent));
+
+        // Uma pequena componente para tras num clique lateral nao e uma volta.
+        if (forward <= 0.01f || forward < sideways)
+            return false;
+
+        Vector2 center = doorwayBounds.center;
+        float startSide = Vector2.Dot(rb.position - center, normal);
+        float targetSide = Vector2.Dot(targetPosition - center, normal);
+        float halfDepth = Mathf.Abs(normal.x) * doorwayBounds.extents.x +
+            Mathf.Abs(normal.y) * doorwayBounds.extents.y;
+
+        // O clique precisa alcancar a entrada. 
+        if (startSide > 0.01f || targetSide <= -halfDepth + 0.05f)
+            return false;
+
+        Vector2 crossingPoint = rb.position + movement * (-startSide / forward);
+        float halfWidth = Mathf.Abs(tangent.x) * doorwayBounds.extents.x +
+            Mathf.Abs(tangent.y) * doorwayBounds.extents.y;
+
+        // Clicar do outro lado de uma parede, fora da abertura, nao usa a porta.
+        return Mathf.Abs(Vector2.Dot(crossingPoint - center, tangent)) <= halfWidth;
+    }
+
+    public void CancelTransition(Vector2 position)
+    {
+        rb.position = position;
+        EndTransition();
     }
 }

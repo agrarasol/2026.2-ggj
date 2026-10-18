@@ -5,21 +5,18 @@ public class RoomZone : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        PlayerRoomTracker playerTracker = other.GetComponent<PlayerRoomTracker>();
-        
-        if (playerTracker != null)
-        {
-            playerTracker.EnterRoom(this);
-        }
-    }
+        Rigidbody2D body = other.attachedRigidbody;
+        PlayerRoomTracker playerTracker = body != null
+            ? body.GetComponent<PlayerRoomTracker>()
+            : other.GetComponentInParent<PlayerRoomTracker>();
 
-    void OnTriggerExit2D(Collider2D other)
-    {
-        PlayerRoomTracker playerTracker = other.GetComponent<PlayerRoomTracker>();
+        if (playerTracker == null || playerTracker.CurrentRoom != null)
+            return;
 
-        if (playerTracker != null)
-        {
-            playerTracker.ExitRoom(this);
-        }
+        PlayerMove playerMove = playerTracker.GetComponent<PlayerMove>();
+        if (playerMove != null && playerMove.IsTransitioning)
+            return;
+
+        playerTracker.EnterRoom(this);
     }
 }

@@ -31,9 +31,13 @@ public class CandleManager : MonoBehaviour
     [SerializeField] private float slowBeepInterval = 1.2f;
     [SerializeField] private float fastBeepInterval = 0.18f;
     [SerializeField] private float directionRange = 8f;
-    [Header("Alcance do Som")]
-    [SerializeField] private float minDistance = 2f;
-    [SerializeField] private float maxDistance = 15f;
+
+    [Header("Volume por distancia")]
+    [SerializeField, Min(0f)] private float minDistance = 2f;
+    [Tooltip("Distancia a partir da qual o bipe permanece no volume minimo.")]
+    [SerializeField, Min(0.01f)] private float maxDistance = 15f;
+    [SerializeField, Range(0.01f, 1f)] private float minVolumeMultiplier = 0.2f;
+
     [Header("Eventos")]
     [SerializeField] private UnityEvent onTimeExpired;
 
@@ -147,12 +151,12 @@ public class CandleManager : MonoBehaviour
         float progress = Mathf.Clamp01(1f -remainingTime / Mathf.Max(relightDuration, 0.01f));
         float currentInterval = Mathf.Lerp(slowBeepInterval, fastBeepInterval, progress);
 
-        PlayDirectionalBeep(progress);
+        PlayDirectionalBeep();
 
         beepTimer =  Mathf.Max(currentInterval, 0.05f);
     }
 
-    private void PlayDirectionalBeep(float progress)
+    private void PlayDirectionalBeep()
     {
         if (beepSource == null|| beepClip == null||player == null|| activeCandle == null)
             return;
@@ -167,24 +171,19 @@ public class CandleManager : MonoBehaviour
 
         beepSource.pitch = 1f + verticalDirection * 0.2f;
 
-      
-        float distance = Vector2.Distance(
-            player.position,
-            activeCandle.transform.position
-        );
-
-        if (distance >= maxDistance)
-            return;
-
         float proximity = 1f - Mathf.InverseLerp(
             minDistance,
-            maxDistance,
-            distance
+            Mathf.Max(maxDistance, minDistance + 0.01f),
+            direction.magnitude
         );
 
-        float volume = beepVolume * proximity * proximity;
+        float volumeMultiplier = Mathf.Lerp(
+            Mathf.Clamp(minVolumeMultiplier, 0.01f, 1f),
+            1f,
+            proximity * proximity
+        );
 
-        beepSource.PlayOneShot(beepClip, volume);
+        beepSource.PlayOneShot(beepClip, beepVolume * volumeMultiplier);
     }
     
 
