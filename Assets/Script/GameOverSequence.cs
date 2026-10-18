@@ -28,6 +28,10 @@ public class GameOverSequence : MonoBehaviour
     [SerializeField, Min(0.1f)] private float fadeDuration = 1.5f;
     [SerializeField, Min(10f)] private float scrollSpeed = 60f;
 
+    [Header("Pular créditos")]
+    [SerializeField] private Button skipButton;
+    private bool skipRequested;
+
     private bool started;
     private bool canRestart;
     private AudioClip fallbackClip;
@@ -45,6 +49,11 @@ public class GameOverSequence : MonoBehaviour
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
         HidePanel();
+
+        if(skipBButton != null)
+        {
+            skipButton.onCllick.AddListener(SkipCredits);
+        }
     }
 
     public void HidePanel()
@@ -57,6 +66,7 @@ public class GameOverSequence : MonoBehaviour
         }
         if (logosGroup != null) logosGroup.alpha = 0f;
         if (restartHint != null) restartHint.SetActive(false);
+        if (skipButton != null) skipButton.gameObject.SetActive(false);
     }
 
     // O GameFlow chama Play depois de entrar no estado GameOver.
@@ -100,6 +110,7 @@ public class GameOverSequence : MonoBehaviour
         canRestart = true;
         if (restartHint != null) restartHint.SetActive(true);
 
+        if (skipButton != null) skipButton.gameObject.SetActive(true);
         // 3. créditos sobem até sair da tela
         if (creditsContent != null)
         {
@@ -125,6 +136,8 @@ public class GameOverSequence : MonoBehaviour
             }
         }
 
+        if (skipButton != null) skipButton.gameObject.SetActive(false);
+
         // 4. logos aparecem no final
         yield return new WaitForSecondsRealtime(pauseBeforeLogos);
 
@@ -140,16 +153,6 @@ public class GameOverSequence : MonoBehaviour
 
         IsComplete = true;
         Completed?.Invoke();
-    }
-
-    private void Update()
-    {
-        if (!canRestart || Keyboard.current == null || GameFlow.Instance == null ||
-            GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.GameOver)
-            return;
-
-        if (Keyboard.current.rKey.wasPressedThisFrame)
-            GameFlow.Instance.PlayGame();
     }
 
     public void StopSequence()
@@ -175,6 +178,38 @@ public class GameOverSequence : MonoBehaviour
             Destroy(fallbackClip);
     }
 
+    public void SkipCredits()
+    {
+    if (!started || IsComplete) return;   // evita rodar duas vezes
+
+    StopAllCoroutines();
+    if (audioSource != null)
+        audioSource.Stop();
+
+    if (panel != null)
+    {
+        panel.gameObject.SetActive(true);
+        panel.alpha = 1f;
+        panel.blocksRaycasts = true;
+    }
+
+    if (creditsContent != null)
+        creditsContent.gameObject.SetActive(false);
+
+    if (skipButton != null)
+        skipButton.gameObject.SetActive(false);
+
+    if (restartHint != null)
+        restartHint.SetActive(true);
+
+    if (logosGroup != null)
+        logosGroup.alpha = 1f;
+
+    canRestart = true;
+    IsComplete = true;
+    Completed?.Invoke();
+}
+
     // tom grave descendo, só pra não ficar mudo enquanto não tem o som final
     private AudioClip MakeFallbackTone()
     {
@@ -195,3 +230,4 @@ public class GameOverSequence : MonoBehaviour
         return clip;
     }
 }
+
