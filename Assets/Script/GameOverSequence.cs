@@ -50,9 +50,9 @@ public class GameOverSequence : MonoBehaviour
         audioSource.spatialBlend = 0f;
         HidePanel();
 
-        if(skipBButton != null)
+        if(skipButton != null)
         {
-            skipButton.onCllick.AddListener(SkipCredits);
+            skipButton.onClick.AddListener(SkipCredits);
         }
     }
 
