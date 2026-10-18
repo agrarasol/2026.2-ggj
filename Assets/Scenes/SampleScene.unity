@@ -754,7 +754,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument:
+          m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &232677937
@@ -6167,7 +6167,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument:
+          m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1596680194
@@ -13128,7 +13128,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument:
+          m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1950731181
@@ -14395,6 +14395,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 454dfb6eab7e1d94f88dff6586959286, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossDoorChase
+--- !u!114 &2107600000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 646683678}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53558470b46b41d1856a0b31e82bc0e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollectedItemsHUD
+  gameFlow: {fileID: 646683679}
+  hudPanel: {fileID: 1401473001}
+  itemTemplate: {fileID: 356091975}
 --- !u!114 &2114324547 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2034152958136088517, guid: b69a038be1fb9f74b9ee6e799fa90f38, type: 3}
@@ -14797,21 +14812,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b69a038be1fb9f74b9ee6e799fa90f38, type: 3}
---- !u!114 &2107600000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 646683678}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 53558470b46b41d1856a0b31e82bc0e3, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::CollectedItemsHUD
-  gameFlow: {fileID: 646683679}
-  hudPanel: {fileID: 1401473001}
-  itemTemplate: {fileID: 356091975}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
