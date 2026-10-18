@@ -14,23 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FurnitureLootTable
   emptyWeight: 45
   items:
-  - itemName: D
-    icon: {fileID: 0}
+  - itemName: Disco
+    icon: {fileID: -4195959552909295376, guid: 46350d36549eabd4db9accdda48463d1, type: 3}
     rarity: 0
     weight: 35
     timeBonus: 5
-  - itemName: C
-    icon: {fileID: 0}
+  - itemName: Porta-Retrato
+    icon: {fileID: -1002341406988817700, guid: b26a2189525c03f4e8e0b922cc44e633, type: 3}
     rarity: 1
     weight: 15
     timeBonus: 12
-  - itemName: B
-    icon: {fileID: 0}
+  - itemName: Livro
+    icon: {fileID: -7674561988555764690, guid: a65d0016a619ae84f8f60034862c9037, type: 3}
     rarity: 2
     weight: 4
     timeBonus: 25
-  - itemName: A
-    icon: {fileID: 0}
+  - itemName: "R\xE9logio"
+    icon: {fileID: -6608864446495699696, guid: ba0bdff70f4c3474daa95b4233a8f8fa, type: 3}
     rarity: 3
     weight: 1
     timeBonus: 45
