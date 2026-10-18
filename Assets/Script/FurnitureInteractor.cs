@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
-// Resolve o clique antes do PlayerMove para que iniciar a busca nao mova o jogador.
+// Resolve os cliques de interacao antes do movimento do jogador.
 [DefaultExecutionOrder(-50)]
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerMove))]
@@ -16,6 +16,7 @@ public class FurnitureInteractor : MonoBehaviour
     private PlayerRoomTracker roomTracker;
     private Collider2D playerCollider;
     private Camera worldCamera;
+    private CandleManager candleManager;
     private FurnitureSearchTarget currentTarget;
     private float elapsed;
 
@@ -29,6 +30,7 @@ public class FurnitureInteractor : MonoBehaviour
         roomTracker = GetComponent<PlayerRoomTracker>();
         playerCollider = GetComponent<Collider2D>();
         worldCamera = Camera.main;
+        candleManager = FindAnyObjectByType<CandleManager>();
     }
 
     private void OnEnable()
@@ -86,7 +88,21 @@ public class FurnitureInteractor : MonoBehaviour
             return;
         }
 
-        FurnitureSearchTarget hovered = FindAt(worldCamera.ScreenToWorldPoint(mouse.position.ReadValue()));
+        Vector2 pointerPosition = worldCamera.ScreenToWorldPoint(mouse.position.ReadValue());
+        Candle candle = candleManager != null ? candleManager.ActiveCandle : null;
+        if (candle != null && candle.Room == roomTracker.CurrentRoom && candle.ContainsPointer(pointerPosition))
+        {
+            bool canRelight = candleManager.CanRelight(candle);
+            if (feedback != null) feedback.ShowCandleHover(canRelight);
+            if (mouse.leftButton.wasPressedThisFrame && candleManager.TryRelight(candle))
+            {
+                player.ConsumeMovementClick();
+                if (feedback != null) feedback.ClearPointer();
+            }
+            return;
+        }
+
+        FurnitureSearchTarget hovered = FindAt(pointerPosition);
         bool inReach = hovered != null && hovered.IsInReach(playerCollider);
         if (feedback != null) feedback.ShowHover(hovered, inReach);
         if (mouse.leftButton.wasPressedThisFrame && hovered != null && hovered.IsAvailable && inReach)

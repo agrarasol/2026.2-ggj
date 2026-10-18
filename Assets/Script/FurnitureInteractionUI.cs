@@ -99,6 +99,14 @@ public class FurnitureInteractionUI : MonoBehaviour
             : inReach ? $"{target.DisplayName}\nClique para vasculhar" : $"{target.DisplayName}\nChegue mais perto";
     }
 
+    public void ShowCandleHover(bool inReach)
+    {
+        SetPointer(inReach, false, 0f);
+        if (hint == null) return;
+        hint.gameObject.SetActive(true);
+        hint.text = inReach ? "Vela\nClique para reacender" : "Vela\nChegue mais perto";
+    }
+
     public void ShowProgress(float progress)
     {
         SetPointer(true, true, progress);
@@ -107,6 +115,14 @@ public class FurnitureInteractionUI : MonoBehaviour
             hint.gameObject.SetActive(true);
             hint.text = "Vasculhando...";
         }
+    }
+
+    public void ShowInteractionHint(string text)
+    {
+        ClearPointer();
+        if (hint == null) return;
+        hint.gameObject.SetActive(true);
+        hint.text = text;
     }
 
     public void ShowResult(FurnitureLootEntry item)

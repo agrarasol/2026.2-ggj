@@ -2,14 +2,26 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum RoomPassageType { Door, OpenBoundary, Stairs }
+
 public class DoorTransition : MonoBehaviour
 {
     private static readonly List<DoorTransition> activeDoors = new List<DoorTransition>();
+    public static IReadOnlyList<DoorTransition> ActivePassages => activeDoors;
 
     public RoomZone SourceRoom => sourceRoom;
     public RoomZone DestinationRoom => destinationRoom;
     public Vector2 ApproachPosition => approachPoint != null ? (Vector2)approachPoint.position : (Vector2)transform.position;
     public Vector2 EntryPosition => entryPoint != null ? (Vector2)entryPoint.position : (Vector2)transform.position;
+    public RoomPassageType PassageType => passageType;
+    public float StairDuration => Mathf.Max(0.1f, stairTravelDuration);
+    public Vector2 PassageDirection => passageType == RoomPassageType.Stairs ?
+        (stairClimbPoint != null ? ((Vector2)stairClimbPoint.position - ApproachPosition).normalized : Vector2.up) :
+        (EntryPosition - ApproachPosition).normalized;
+    public Vector2 ArrivalDirection => passageType == RoomPassageType.Stairs && entryPoint != null && entryPoint.parent != null ?
+        ((Vector2)(entryPoint.position - entryPoint.parent.position)).normalized : PassageDirection;
+    public string InteractionHint => sourceRoom != null && destinationRoom != null &&
+        destinationRoom.transform.position.y > sourceRoom.transform.position.y ? "Clique para subir a escada" : "Clique para descer a escada";
 
 // Devolve a primeira porta do caminho mais curto entre duas salas (null se não houver caminho)
     public static DoorTransition NextDoorTowards(RoomZone from, RoomZone to)
@@ -51,6 +63,13 @@ public class DoorTransition : MonoBehaviour
 
     [SerializeField, Min(0.01f)] private float transitionDuration = 0.5f;
     [SerializeField, Min(0.1f)] private float movementTimeout = 5f;
+    [Header("Tipo de passagem")]
+    [SerializeField] private RoomPassageType passageType;
+    [Header("Escada")]
+    [SerializeField] private Transform stairClimbPoint;
+    [SerializeField] private SpriteRenderer stairRenderer;
+    [SerializeField] private CanvasGroup transitionFade;
+    [SerializeField, Min(0.1f)] private float stairTravelDuration = 0.5f;
 
     private PlayerMove transitioningPlayer;
     private PlayerRoomTracker transitioningTracker;
@@ -64,6 +83,14 @@ public class DoorTransition : MonoBehaviour
     {
         if (!activeDoors.Contains(this))
             activeDoors.Add(this);
+        if (GameFlow.Instance != null) GameFlow.Instance.StateChanged += OnGameStateChanged;
+    }
+
+    private void OnGameStateChanged(GameState state)
+    {
+        if (state == GameState.Playing || transitioningPlayer == null) return;
+        StopAllCoroutines();
+        FinishTransition(false);
     }
 
     public static bool TryHandleCrossing(PlayerMove playerMove, Rigidbody2D body, Vector2 nextPosition)
@@ -80,7 +107,7 @@ public class DoorTransition : MonoBehaviour
 
         foreach (DoorTransition door in activeDoors)
         {
-            if (door == null || !door.CanStartTransition(playerMove, tracker))
+            if (door == null || door.passageType == RoomPassageType.Stairs || !door.CanStartTransition(playerMove, tracker))
                 continue;
 
             if (door.TryGetCrossing(body, nextPosition, out float fraction) && fraction < nearestFraction)
@@ -105,7 +132,7 @@ public class DoorTransition : MonoBehaviour
             return false;
 
         Collider2D doorway = GetComponent<Collider2D>();
-        Vector2 direction = entryPoint.position - approachPoint.position;
+        Vector2 direction = PassageDirection;
         if (doorway == null || !doorway.enabled || direction.sqrMagnitude < 0.0001f)
             return false;
 
@@ -172,8 +199,57 @@ public class DoorTransition : MonoBehaviour
         if (!CanStartTransition(playerMove, tracker) || !HasReferences())
             return false;
 
-        StartCoroutine(TransitionCoroutine(playerMove, tracker));
+        if (passageType == RoomPassageType.OpenBoundary)
+            StartCoroutine(OpenTransitionCoroutine(playerMove, tracker));
+        else if (passageType == RoomPassageType.Stairs)
+            StartCoroutine(StairTransitionCoroutine(playerMove, tracker));
+        else
+            StartCoroutine(TransitionCoroutine(playerMove, tracker));
         return true;
+    }
+
+    public bool TryUseStairs(PlayerMove playerMove)
+    {
+        return passageType == RoomPassageType.Stairs && playerMove != null &&
+            TryBeginTransition(playerMove, playerMove.GetComponent<PlayerRoomTracker>());
+    }
+
+    public bool ContainsStairPointer(Vector2 position)
+    {
+        if (passageType != RoomPassageType.Stairs || !isActiveAndEnabled) return false;
+        if (stairRenderer != null && stairRenderer.enabled && stairRenderer.gameObject.activeInHierarchy)
+        {
+            Bounds bounds = stairRenderer.bounds;
+            return position.x >= bounds.min.x && position.x <= bounds.max.x &&
+                position.y >= bounds.min.y && position.y <= bounds.max.y;
+        }
+        Collider2D area = GetComponent<Collider2D>();
+        return area != null && area.enabled && area.OverlapPoint(position);
+    }
+
+    public Vector2 GetApproachPosition(Vector2 from)
+    {
+        if (passageType != RoomPassageType.OpenBoundary) return ApproachPosition;
+        Vector2 tangent = new Vector2(-PassageDirection.y, PassageDirection.x);
+        return ApproachPosition + tangent * Vector2.Dot(from - ApproachPosition, tangent);
+    }
+
+    public Vector2 GetEntryPosition(Vector2 from)
+    {
+        if (passageType != RoomPassageType.OpenBoundary) return EntryPosition;
+        Vector2 tangent = new Vector2(-PassageDirection.y, PassageDirection.x);
+        return EntryPosition + tangent * Vector2.Dot(from - ApproachPosition, tangent);
+    }
+
+    public Vector2 GetOpenArrival(Vector2 start, Vector2 movementDirection)
+    {
+        Vector2 normal = PassageDirection;
+        Vector2 direction = movementDirection.sqrMagnitude > 0.0001f ? movementDirection.normalized : normal;
+        float forward = Vector2.Dot(direction, normal);
+        if (forward <= 0f) direction = normal;
+        forward = Mathf.Max(Vector2.Dot(direction, normal), 0.0001f);
+        float distance = Mathf.Max(0.1f, Vector2.Dot(EntryPosition - start, normal));
+        return start + direction * (distance / forward);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -188,7 +264,7 @@ public class DoorTransition : MonoBehaviour
 
     private void TryStartTransition(Collider2D other)
     {
-        if (!isActiveAndEnabled || transitioningPlayer != null)
+        if (passageType != RoomPassageType.Door || !isActiveAndEnabled || transitioningPlayer != null)
             return;
 
         Rigidbody2D body = other.attachedRigidbody;
@@ -211,12 +287,7 @@ public class DoorTransition : MonoBehaviour
 
     private IEnumerator TransitionCoroutine(PlayerMove playerMove, PlayerRoomTracker playerTracker)
     {
-        transitioningPlayer = playerMove;
-        transitioningTracker = playerTracker;
-        transitioningCamera = Camera.main.transform;
-        playerStartPosition = playerMove.GetComponent<Rigidbody2D>().position;
-        cameraStartPosition = transitioningCamera.position;
-
+        TrackTransition(playerMove, playerTracker);
         bool completed = false;
 
         try
@@ -281,8 +352,123 @@ public class DoorTransition : MonoBehaviour
         }
     }
 
+    private void TrackTransition(PlayerMove playerMove, PlayerRoomTracker playerTracker)
+    {
+        transitioningPlayer = playerMove;
+        transitioningTracker = playerTracker;
+        transitioningCamera = Camera.main.transform;
+        playerStartPosition = playerMove.GetComponent<Rigidbody2D>().position;
+        cameraStartPosition = transitioningCamera.position;
+    }
+
+    private bool CanContinueTransition => GameFlow.CanPlay && transitioningPlayer != null &&
+        transitioningPlayer.isActiveAndEnabled && !transitioningPlayer.IsDefeated && transitioningCamera != null;
+
+    private IEnumerator OpenTransitionCoroutine(PlayerMove playerMove, PlayerRoomTracker playerTracker)
+    {
+        Vector2 arrival = GetOpenArrival(playerMove.GetComponent<Rigidbody2D>().position, playerMove.MovementDirection);
+        TrackTransition(playerMove, playerTracker);
+        bool completed = false;
+        try
+        {
+            playerMove.BeginTransition(arrival);
+            float elapsed = 0f;
+            float bestDistance = Vector2.Distance(playerStartPosition, arrival);
+            float lastProgressTime = 0f;
+            float duration = Mathf.Max(transitionDuration, 0.01f);
+            Vector3 destination = cameraPoint.position;
+            destination.z = cameraStartPosition.z;
+            while (CanContinueTransition && (elapsed < duration || !playerMove.ReachedTarget))
+            {
+                if (elapsed > Mathf.Max(movementTimeout, duration)) yield break;
+                elapsed += Time.deltaTime;
+                float distance = Vector2.Distance(playerMove.GetComponent<Rigidbody2D>().position, arrival);
+                if (distance < bestDistance - 0.001f)
+                {
+                    bestDistance = distance;
+                    lastProgressTime = elapsed;
+                }
+                else if (!playerMove.ReachedTarget && elapsed - lastProgressTime > 0.6f)
+                {
+                    Vector2 stoppedAt = playerMove.GetComponent<Rigidbody2D>().position;
+                    if (!destinationRoom.Contains(stoppedAt)) yield break;
+                    playerMove.BeginTransition(stoppedAt);
+                }
+                transitioningCamera.position = Vector3.Lerp(cameraStartPosition, destination,
+                    Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / duration)));
+                yield return null;
+            }
+            completed = CanContinueTransition && playerMove.ReachedTarget &&
+                destinationRoom.Contains(playerMove.GetComponent<Rigidbody2D>().position);
+            if (completed) transitioningCamera.position = destination;
+        }
+        finally { FinishTransition(completed); }
+    }
+
+    private IEnumerator StairTransitionCoroutine(PlayerMove playerMove, PlayerRoomTracker playerTracker)
+    {
+        TrackTransition(playerMove, playerTracker);
+        bool completed = false;
+        try
+        {
+            yield return MoveStairStep(ApproachPosition);
+            if (!CanContinueTransition || !playerMove.ReachedTarget) yield break;
+            Vector2 climb = stairClimbPoint != null ? (Vector2)stairClimbPoint.position : ApproachPosition + Vector2.up * 0.8f;
+            yield return MoveStairStep(climb);
+            if (!CanContinueTransition || !playerMove.ReachedTarget) yield break;
+            yield return FadeStairs(0f, 1f);
+            if (!CanContinueTransition) yield break;
+
+            Rigidbody2D body = playerMove.GetComponent<Rigidbody2D>();
+            body.position = EntryPosition;
+            playerMove.transform.position = new Vector3(EntryPosition.x, EntryPosition.y, playerMove.transform.position.z);
+            playerMove.BeginTransition(EntryPosition);
+            Vector3 destination = cameraPoint.position;
+            destination.z = cameraStartPosition.z;
+            transitioningCamera.position = destination;
+            Physics2D.SyncTransforms();
+            yield return FadeStairs(1f, 0f);
+            completed = CanContinueTransition;
+        }
+        finally { FinishTransition(completed); }
+    }
+
+    private IEnumerator MoveStairStep(Vector2 target)
+    {
+        transitioningPlayer.BeginTransition(target);
+        float elapsed = 0f;
+        float bestDistance = Vector2.Distance(transitioningPlayer.transform.position, target);
+        float lastProgressTime = 0f;
+        while (CanContinueTransition && !transitioningPlayer.ReachedTarget && elapsed < movementTimeout)
+        {
+            elapsed += Time.deltaTime;
+            float distance = Vector2.Distance(transitioningPlayer.transform.position, target);
+            if (distance < bestDistance - 0.001f) { bestDistance = distance; lastProgressTime = elapsed; }
+            else if (elapsed - lastProgressTime > 0.75f) yield break;
+            yield return null;
+        }
+    }
+
+    private IEnumerator FadeStairs(float from, float to)
+    {
+        float elapsed = 0f;
+        if (transitionFade != null)
+        {
+            transitionFade.gameObject.SetActive(true);
+            transitionFade.blocksRaycasts = true;
+        }
+        float duration = StairDuration * 0.5f;
+        while (CanContinueTransition && elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            if (transitionFade != null) transitionFade.alpha = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+    }
+
     private void FinishTransition(bool completed)
     {
+        bool wasTransitioning = transitioningPlayer != null;
         bool defeated = transitioningPlayer != null && transitioningPlayer.IsDefeated;
 
         if (transitioningPlayer != null && !defeated)
@@ -300,6 +486,13 @@ public class DoorTransition : MonoBehaviour
         if (!completed && !defeated && transitioningCamera != null)
             transitioningCamera.position = cameraStartPosition;
 
+        if (wasTransitioning && transitionFade != null)
+        {
+            transitionFade.alpha = 0f;
+            transitionFade.blocksRaycasts = false;
+            transitionFade.gameObject.SetActive(false);
+        }
+
         transitioningPlayer = null;
         transitioningTracker = null;
         transitioningCamera = null;
@@ -307,6 +500,7 @@ public class DoorTransition : MonoBehaviour
 
     private void OnDisable()
     {
+        if (GameFlow.Instance != null) GameFlow.Instance.StateChanged -= OnGameStateChanged;
         activeDoors.Remove(this);
         StopAllCoroutines();
         FinishTransition(false);

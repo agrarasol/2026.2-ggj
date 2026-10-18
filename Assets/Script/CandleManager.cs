@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
+// Atualiza o prazo da vela antes de resolver os cliques do jogador.
+[DefaultExecutionOrder(-55)]
 public class CandleManager : MonoBehaviour
 {
     [Header("Velas")]
@@ -21,7 +22,6 @@ public class CandleManager : MonoBehaviour
     [SerializeField] private float relightDuration = 25f;
 
     [Header("Interacao")]
-    [SerializeField] private Key interactionKey = Key.E;
     [SerializeField] private float interactionDistance = 1.2f;
 
     [Header("Audio")]
@@ -162,13 +162,6 @@ public class CandleManager : MonoBehaviour
             return;
         }
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && interactionKey != Key.None &&
-            keyboard[interactionKey].wasPressedThisFrame && TryRelight(activeCandle))
-        {
-            return;
-        }
-
         UpdateBeep();
     }
 
@@ -218,24 +211,24 @@ public class CandleManager : MonoBehaviour
     }
     
 
-    public bool TryRelight(Candle candle)
+    public bool CanRelight(Candle candle)
     {
-        if (!GameFlow.CanPlay || gameOver || player == null)
+        if (!isActiveAndEnabled || !GameFlow.CanPlay || gameOver || player == null ||
+            candle == null || candle != activeCandle || !candle.isActiveAndEnabled || candle.IsLit ||
+            remainingTime <= 0f || roomTracker == null || roomTracker.CurrentRoom == null ||
+            roomTracker.CurrentRoom != candle.Room)
             return false;
 
         PlayerMove movement = player.GetComponent<PlayerMove>();
-        if (movement != null && movement.IsInteracting)
+        if (movement != null && (movement.IsDefeated || movement.IsTransitioning || movement.IsInteracting))
             return false;
 
-        if (candle == null || candle != activeCandle)
-            return false;
+        return Vector2.Distance(player.position, candle.InteractionPosition) <= interactionDistance;
+    }
 
-        float distance = Vector2.Distance(
-            player.position,
-            candle.InteractionPosition
-        );
-
-        if (distance > interactionDistance)
+    public bool TryRelight(Candle candle)
+    {
+        if (!CanRelight(candle))
             return false;
 
         candle.SetLit(true);
