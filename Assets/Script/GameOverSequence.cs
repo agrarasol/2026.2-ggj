@@ -30,7 +30,10 @@ public class GameOverSequence : MonoBehaviour
     [SerializeField, Min(10f)] private float scrollSpeed = 60f;
 
     private bool started;
+    private int startedFrame;
     private AudioClip fallbackClip;
+    private Graphic panelBackground;
+    private Color panelBackgroundColor;
 
     public bool IsRunning => started && !IsComplete;
     public bool IsComplete { get; private set; }
@@ -43,11 +46,17 @@ public class GameOverSequence : MonoBehaviour
 
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
+        if (panel != null)
+        {
+            panelBackground = panel.GetComponent<Graphic>();
+            if (panelBackground != null) panelBackgroundColor = panelBackground.color;
+        }
         HidePanel();
     }
 
     public void HidePanel()
     {
+        if (panelBackground != null) panelBackground.color = panelBackgroundColor;
         if (panel != null)
         {
             panel.alpha = 0f;
@@ -58,7 +67,7 @@ public class GameOverSequence : MonoBehaviour
         if (skipHint != null) skipHint.SetActive(false);
     }
 
-    // Os creditos aparecem somente ao voltar do Game Over para o menu.
+    // Os creditos podem ser abertos pelo menu inicial ou depois do Game Over.
     public void Play()
     {
         if (started || GameFlow.Instance == null || GameFlow.Instance.IsLoading ||
@@ -66,11 +75,12 @@ public class GameOverSequence : MonoBehaviour
             return;
 
         started = true;
+        startedFrame = Time.frameCount;
         IsComplete = false;
-        StartCoroutine(Sequence());
+        StartCoroutine(Sequence(GameFlow.Instance.PreviousState == GameState.Menu));
     }
 
-    private IEnumerator Sequence()
+    private IEnumerator Sequence(bool showOverMenu)
     {
         if (creditsContent != null) creditsContent.gameObject.SetActive(false);
         if (skipHint != null) skipHint.SetActive(true);
@@ -78,6 +88,13 @@ public class GameOverSequence : MonoBehaviour
         // 2. escurece a tela
         if (panel != null)
         {
+            if (panelBackground != null)
+            {
+                Color color = panelBackgroundColor;
+                if (showOverMenu) color.a = 0.80f;
+                panelBackground.color = color;
+            }
+            panel.transform.SetAsLastSibling();
             panel.gameObject.SetActive(true);
             panel.blocksRaycasts = true;
 
@@ -134,7 +151,7 @@ public class GameOverSequence : MonoBehaviour
 
     private void Update()
     {
-        if (!IsRunning || Keyboard.current == null || GameFlow.Instance == null ||
+        if (!IsRunning || Time.frameCount == startedFrame || Keyboard.current == null || GameFlow.Instance == null ||
             GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.Credits)
             return;
 

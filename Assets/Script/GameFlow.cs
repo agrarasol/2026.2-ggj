@@ -34,6 +34,7 @@ public class GameFlow : MonoBehaviour
 
     [Header("Botoes")]
     [SerializeField] private Button playButton;
+    [SerializeField] private Button creditsButton;
     [SerializeField] private Button fullscreenButton;
     [SerializeField] private Button quitButton;
     [SerializeField] private Button retryButton;
@@ -77,7 +78,6 @@ public class GameFlow : MonoBehaviour
     private static void StartInWindowedMode()
     {
 #if UNITY_STANDALONE && !UNITY_EDITOR
-        // O Unity pode restaurar o modo de tela usado na execucao anterior.
         Screen.SetResolution(DefaultWindowWidth, DefaultWindowHeight, FullScreenMode.Windowed);
 #endif
     }
@@ -110,6 +110,9 @@ public class GameFlow : MonoBehaviour
     private void ConnectExistingUI()
     {
         Canvas canvas = InterfaceCanvas;
+        if (creditsButton == null && mainMenuPanel != null)
+            creditsButton = FindUIElement(mainMenuPanel.transform, "CreditsButton")?.GetComponent<Button>();
+        ConnectButton(creditsButton, ShowCredits);
         if (fullscreenButton == null && mainMenuPanel != null)
             fullscreenButton = FindUIElement(mainMenuPanel.transform, "FullscreenButton")?.GetComponent<Button>();
         if (fullscreenButton != null)
@@ -248,8 +251,7 @@ public class GameFlow : MonoBehaviour
 
         if (State == GameState.GameOver && gameOverSequence != null && gameOverSequence.isActiveAndEnabled)
         {
-            SetState(GameState.Credits);
-            gameOverSequence.Play();
+            ShowCredits();
             return;
         }
 
@@ -257,6 +259,17 @@ public class GameFlow : MonoBehaviour
             gameOverSequence.StopSequence();
 
         SetState(GameState.Menu);
+    }
+
+    public void ShowCredits()
+    {
+        if (IsLoading || IsScreenTransitioning || (State != GameState.Menu && State != GameState.GameOver) ||
+            gameOverSequence == null || !gameOverSequence.isActiveAndEnabled)
+            return;
+
+        bool keepMenuVisible = State == GameState.Menu;
+        SetState(GameState.Credits, !keepMenuVisible);
+        gameOverSequence.Play();
     }
 
     public void ShowGameOver()
@@ -359,7 +372,7 @@ public class GameFlow : MonoBehaviour
         Scene scene = gameObject.scene;
 
         IsLoading = true;
-        foreach (Button button in new[] { playButton, fullscreenButton, quitButton, retryButton, mainMenuButton, resumeButton, restartButton, pauseExitButton })
+        foreach (Button button in new[] { playButton, creditsButton, fullscreenButton, quitButton, retryButton, mainMenuButton, resumeButton, restartButton, pauseExitButton })
             if (button != null)
                 button.interactable = false;
 
