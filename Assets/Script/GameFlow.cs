@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -33,6 +34,7 @@ public class GameFlow : MonoBehaviour
 
     [Header("Botoes")]
     [SerializeField] private Button playButton;
+    [SerializeField] private Button fullscreenButton;
     [SerializeField] private Button quitButton;
     [SerializeField] private Button retryButton;
     [SerializeField] private Button mainMenuButton;
@@ -40,7 +42,12 @@ public class GameFlow : MonoBehaviour
     [SerializeField] private Button restartButton;
     [SerializeField] private Button pauseExitButton;
 
+    private const int DefaultWindowWidth = 1280;
+    private const int DefaultWindowHeight = 720;
+    private static int windowedWidth = DefaultWindowWidth;
+    private static int windowedHeight = DefaultWindowHeight;
     private static bool playAfterReload;
+    private TMP_Text fullscreenButtonLabel;
     private bool startPlaying;
     private bool hasStarted;
 
@@ -61,7 +68,18 @@ public class GameFlow : MonoBehaviour
     private static void ResetStartupState()
     {
         playAfterReload = false;
+        windowedWidth = DefaultWindowWidth;
+        windowedHeight = DefaultWindowHeight;
         Instance = null;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void StartInWindowedMode()
+    {
+#if UNITY_STANDALONE && !UNITY_EDITOR
+        // O Unity pode restaurar o modo de tela usado na execucao anterior.
+        Screen.SetResolution(DefaultWindowWidth, DefaultWindowHeight, FullScreenMode.Windowed);
+#endif
     }
 
     private void Awake()
@@ -92,6 +110,12 @@ public class GameFlow : MonoBehaviour
     private void ConnectExistingUI()
     {
         Canvas canvas = InterfaceCanvas;
+        if (fullscreenButton == null && mainMenuPanel != null)
+            fullscreenButton = FindUIElement(mainMenuPanel.transform, "FullscreenButton")?.GetComponent<Button>();
+        if (fullscreenButton != null)
+            fullscreenButtonLabel = fullscreenButton.GetComponentInChildren<TMP_Text>(true);
+        ConnectButton(fullscreenButton, ToggleFullscreen);
+        UpdateFullscreenButtonLabel();
         if (pausePanel == null && canvas != null)
             pausePanel = FindUIElement(canvas.transform, "PauseMenu")?.gameObject;
         if (pausePanel != null)
@@ -138,8 +162,32 @@ public class GameFlow : MonoBehaviour
 
     private void Update()
     {
+        UpdateFullscreenButtonLabel();
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             TogglePause();
+    }
+
+    public void ToggleFullscreen()
+    {
+        if (IsLoading || IsScreenTransitioning) return;
+
+        if (Screen.fullScreen)
+            Screen.SetResolution(windowedWidth, windowedHeight, FullScreenMode.Windowed);
+        else
+        {
+            windowedWidth = Screen.width;
+            windowedHeight = Screen.height;
+            Resolution displayResolution = Screen.currentResolution;
+            Screen.SetResolution(displayResolution.width, displayResolution.height, FullScreenMode.FullScreenWindow);
+        }
+    }
+
+    private void UpdateFullscreenButtonLabel()
+    {
+        if (fullscreenButtonLabel == null) return;
+        string label = Screen.fullScreen ? "Modo janela" : "Tela cheia";
+        if (fullscreenButtonLabel.text != label)
+            fullscreenButtonLabel.text = label;
     }
 
     public void TogglePause()
@@ -311,7 +359,7 @@ public class GameFlow : MonoBehaviour
         Scene scene = gameObject.scene;
 
         IsLoading = true;
-        foreach (Button button in new[] { playButton, quitButton, retryButton, mainMenuButton, resumeButton, restartButton, pauseExitButton })
+        foreach (Button button in new[] { playButton, fullscreenButton, quitButton, retryButton, mainMenuButton, resumeButton, restartButton, pauseExitButton })
             if (button != null)
                 button.interactable = false;
 
