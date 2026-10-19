@@ -3228,7 +3228,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 100000, guid: 7e423dac774e48668f111ad21b7e0ff8, type: 3}
       propertyPath: m_Name
-      value: Esconderijo_Rooma
+      value: Esconderijo_RoomA
       objectReference: {fileID: 0}
     - target: {fileID: 114000, guid: 7e423dac774e48668f111ad21b7e0ff8, type: 3}
       propertyPath: dangerRadius

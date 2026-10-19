@@ -2290,14 +2290,6 @@ PrefabInstance:
       propertyPath: room
       value: 
       objectReference: {fileID: 102649204}
-    - target: {fileID: 1281907897698776111, guid: 0a6e22925e9bf7640a66dba0f4129414, type: 3}
-      propertyPath: m_Name
-      value: Esconderijo_RoomA
-      objectReference: {fileID: 0}
-    - target: {fileID: 5539442856895497988, guid: 0a6e22925e9bf7640a66dba0f4129414, type: 3}
-      propertyPath: m_SortingOrder
-      value: 2
-      objectReference: {fileID: 0}
     - target: {fileID: 7687894492257428584, guid: 0a6e22925e9bf7640a66dba0f4129414, type: 3}
       propertyPath: room
       value: 
