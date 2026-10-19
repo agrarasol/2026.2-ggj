@@ -4281,7 +4281,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18d3f4ae20374bd792b657d2a574ecfd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FurnitureSearchTarget
-  displayName: Lareira
+  displayName: Mesa
   room: {fileID: 8400179830332772755}
   furnitureRenderer: {fileID: 6730212195464243237}
   furnitureCollider: {fileID: 6730212195464878805}
