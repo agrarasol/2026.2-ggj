@@ -84,21 +84,21 @@ public class FurnitureInteractor : MonoBehaviour
         if (player.IsInteracting)
             CancelSearch();
 
-        Mouse mouse = Mouse.current;
-        if (mouse == null || worldCamera == null || roomTracker == null ||
-            (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+        if (!PointerInput.Available || worldCamera == null || roomTracker == null ||
+            PointerInput.IsOverUI ||
+            (Mouse.current == null && !PointerInput.IsPressed))   // celular: sem hover, so responde ao toque
         {
             if (feedback != null) feedback.ClearPointer();
             return;
         }
 
-        Vector2 pointerPosition = worldCamera.ScreenToWorldPoint(mouse.position.ReadValue());
+        Vector2 pointerPosition = worldCamera.ScreenToWorldPoint(PointerInput.Position);
         Candle candle = candleManager != null ? candleManager.ActiveCandle : null;
         if (candle != null && candle.Room == roomTracker.CurrentRoom && candle.ContainsPointer(pointerPosition))
         {
             bool canRelight = candleManager.CanRelight(candle);
             if (feedback != null) feedback.ShowCandleHover(canRelight);
-            if (mouse.leftButton.wasPressedThisFrame && candleManager.TryRelight(candle))
+            if (PointerInput.PressedThisFrame && candleManager.TryRelight(candle))
             {
                 player.ConsumeMovementClick();
                 if (feedback != null) feedback.ClearPointer();
@@ -109,7 +109,7 @@ public class FurnitureInteractor : MonoBehaviour
         FurnitureSearchTarget hovered = FindAt(pointerPosition);
         bool inReach = hovered != null && hovered.IsInReach(playerCollider);
         if (feedback != null) feedback.ShowHover(hovered, inReach);
-        if (mouse.leftButton.wasPressedThisFrame && hovered != null && hovered.IsAvailable && inReach)
+        if (PointerInput.PressedThisFrame && hovered != null && hovered.IsAvailable && inReach)
             TryStartSearch(hovered);
     }
 

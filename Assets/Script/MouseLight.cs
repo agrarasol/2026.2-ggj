@@ -28,13 +28,13 @@ public class MouseLight : MonoBehaviour
         cam = Camera.main;
 
         if (player == null)
-            player = FindFirstObjectByType<PlayerMove>();
+            player = FindAnyObjectByType<PlayerMove>();
     }
 
     private void LateUpdate()
     {
         if (GameFlow.IsPaused) return;
-        if (Mouse.current == null)
+        if (!PointerInput.Available)
             return;
 
         if (cam == null)
@@ -45,7 +45,7 @@ public class MouseLight : MonoBehaviour
         if (hideWhenDefeated && player != null)
             lightSource.enabled = !player.IsDefeated;
 
-        Vector3 mouseWorld = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+        Vector3 mouseWorld = cam.ScreenToWorldPoint(PointerInput.Position);
         Vector2 position = mouseWorld;
 
         if (player != null && maxDistanceFromPlayer > 0f)

@@ -58,11 +58,10 @@ public class FurnitureInteractionUI : MonoBehaviour
             return;
         }
 
-        Mouse mouse = Mouse.current;
-        if (mouse == null)
+        if (!PointerInput.Available || (Mouse.current == null && !PointerInput.IsPressed))
             ClearPointer();
         else if (canvasRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvasRect, mouse.position.ReadValue(), null, out Vector2 local))
+            canvasRect, PointerInput.Position, null, out Vector2 local))
         {
             if (pointer != null) pointer.rectTransform.anchoredPosition = local;
             if (hint != null)

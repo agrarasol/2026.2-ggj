@@ -70,25 +70,25 @@ public class PlayerMove : MonoBehaviour
     void Update()
     {
         if (!GameFlow.CanPlay || IsDefeated || IsTransitioning || IsInteracting ||
-            consumedMouseFrame == Time.frameCount || Mouse.current == null) return;
+            consumedMouseFrame == Time.frameCount || !PointerInput.Available) return;
 
-        Vector2 mouseWorldPos = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+        Vector2 mouseWorldPos = cam.ScreenToWorldPoint(PointerInput.Position);
 
         if(waitForMouseRelease)
         {
-            if (Mouse.current.leftButton.isPressed &&
-                !Mouse.current.leftButton.wasPressedThisFrame)
+            if (PointerInput.IsPressed &&
+                !PointerInput.PressedThisFrame)
                 return;
             
             waitForMouseRelease = false;
         }
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (PointerInput.PressedThisFrame)
         {
-            pressStartedOnUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            pressStartedOnUI = PointerInput.IsOverUI;
             if (!pressStartedOnUI) targetPosition = mouseWorldPos;
         }
-        else if (holdToFollow && Mouse.current.leftButton.isPressed && !pressStartedOnUI)
+        else if (holdToFollow && PointerInput.IsPressed && !pressStartedOnUI)
         {
             targetPosition = mouseWorldPos;
         }
@@ -144,7 +144,7 @@ public class PlayerMove : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
 
         IsTransitioning = false;
-        waitForMouseRelease = Mouse.current != null && Mouse.current.leftButton.isPressed;
+        waitForMouseRelease = PointerInput.IsPressed;
         pressStartedOnUI = false;
     }
 
@@ -164,7 +164,7 @@ public class PlayerMove : MonoBehaviour
         IsInteracting = false;
         targetPosition = rb.position;
         rb.linearVelocity = Vector2.zero;
-        waitForMouseRelease = Mouse.current != null && Mouse.current.leftButton.isPressed;
+        waitForMouseRelease = PointerInput.IsPressed;
         pressStartedOnUI = false;
     }
 
