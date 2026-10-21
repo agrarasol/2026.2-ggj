@@ -29,8 +29,8 @@ public static class ScoreBoard
     // ---------------- Supabase (preencha com seus dados) ----------------
     // Crie um projeto em https://supabase.com, crie a tabela 'leaderboard' e pegue
     // a URL e a 'anon key' em Configurações > API.
-    private const string SupabaseUrl = "https://SEU_PROJETO.supabase.co/rest/v1/leaderboard";
-    private const string SupabaseAnonKey = "SUA_ANON_KEY_AQUI";
+    private const string SupabaseUrl = "https://fijhgsyhqlueajoinlsf.supabase.co/rest/v1/leaderboard";
+    private const string SupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpamhnc3locWx1ZWFqb2lubHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1Njg3MDQsImV4cCI6MjEwODE0NDcwNH0.t1eed8DVF-_U7pp8sHC9qY_wm4z74lQ0gMyQvytbf3c";
     private const float RequestTimeout = 8f;
 
     // Caminho local usado como fallback quando não há internet ou a Supabase falha.
@@ -83,15 +83,15 @@ public static class ScoreBoard
         // Tenta enviar pra Supabase.
         var wrapper = SupabaseRequest<SupabaseList>(
             "POST",
-            body: JsonUtility.ToJson(entry),
+            body: JsonUtility.ToJson(new NewScore { name = entry.name, time = entry.time }),
             query: null
         );
 
-        if (wrapper != null && wrapper.entries != null)
+        if (wrapper != null && wrapper.entries != null && wrapper.entries.Count > 0)
         {
-            // A API retorna o que foi inserido; recalculamos o rank com base na lista atualizada.
-            int rank = ComputeRank(wrapper.entries, entry);
-            return rank;
+            // enviou: busca o top de novo pra descobrir a posicao do jogador
+            List<ScoreEntry> top = Load();
+            return top.FindIndex(e => e.name == entry.name && Mathf.Abs(e.time - entry.time) < 0.01f);
         }
 
         // Fallback local: insere no JSON local.
@@ -192,6 +192,10 @@ public static class ScoreBoard
 
         try
         {
+            // a Supabase devolve um array na raiz; o JsonUtility so le objetos
+            if (typeof(T) == typeof(SupabaseList) && json.TrimStart().StartsWith("["))
+                json = "{\"entries\":" + json + "}";
+
             return JsonUtility.FromJson<T>(json);
         }
         catch (Exception e)
@@ -199,6 +203,13 @@ public static class ScoreBoard
             Debug.LogWarning($"Erro ao fazer parse da resposta da Supabase: {e.Message}");
             return default;
         }
+    }
+
+    [Serializable]
+    private class NewScore
+    {
+        public string name;
+        public float time;
     }
 
     // Wrapper para resposta de lista da Supabase (JSON é um array direto, não objeto).
