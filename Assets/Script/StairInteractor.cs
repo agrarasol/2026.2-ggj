@@ -22,18 +22,17 @@ public class StairInteractor : MonoBehaviour
     private void Update()
     {
         hovered = null;
-        Mouse mouse = Mouse.current;
         if (!GameFlow.CanPlay || player.IsDefeated || player.IsTransitioning || player.IsInteracting ||
-            tracker == null || mouse == null || worldCamera == null ||
+            tracker == null || worldCamera == null || !PointerInput.Available ||
             (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())) return;
-        Vector2 position = worldCamera.ScreenToWorldPoint(mouse.position.ReadValue());
+        Vector2 position = worldCamera.ScreenToWorldPoint(PointerInput.Position);
         foreach (DoorTransition passage in DoorTransition.ActivePassages)
         {
             if (passage == null || passage.SourceRoom != tracker.CurrentRoom || !passage.ContainsStairPointer(position)) continue;
             hovered = passage;
             break;
         }
-        if (hovered != null && mouse.leftButton.wasPressedThisFrame && hovered.TryUseStairs(player)) hovered = null;
+        if (hovered != null && PointerInput.PressedThisFrame && hovered.TryUseStairs(player)) hovered = null;
     }
 
     private void LateUpdate()
