@@ -3,23 +3,32 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+// Fica DENTRO do GameOverPanel: quando o painel liga (game over), o placar comeca sozinho.
 public class ScoreboardUI : MonoBehaviour
 {
-    [SerializeField] private GameObject root;            // objeto com tudo do placar
+    [SerializeField] private GameObject root;            // o bloco do placar (ScoreBoardBox)
     [SerializeField] private TMP_Text finalTimeText;
+    [SerializeField] private string finalTimePrefix = "Tempo vivo: ";
     [SerializeField] private TMP_InputField nameInput;
     [SerializeField] private Button submitButton;
     [SerializeField] private TMP_Text listText;
-    [SerializeField] private GameObject continueHint;    // "Aperte ESPAÇO pra continuar"
 
+    private bool initialized;
+    private bool running;
     private bool submitted;
 
     private void Awake()
     {
+        Init();
         if (root != null) root.SetActive(false);
+    }
+
+    private void Init()
+    {
+        if (initialized) return;
+        initialized = true;
 
         if (submitButton != null)
             submitButton.onClick.AddListener(() => submitted = true);
@@ -27,49 +36,80 @@ public class ScoreboardUI : MonoBehaviour
         if (nameInput != null)
         {
             nameInput.characterLimit = ScoreBoard.MaxNameLength;
-            nameInput.onSubmit.AddListener(_ => submitted = true);   // Enter também confirma
+            nameInput.onSubmit.AddListener(_ => submitted = true);   // Enter tambem confirma
         }
+    }
+
+    private void OnEnable()
+    {
+        StartCoroutine(ShowRoutine());
+    }
+
+    private void OnDisable()
+    {
+        running = false;
+        StopAllCoroutines();
     }
 
     public IEnumerator ShowRoutine()
     {
-        float time = RunStats.Instance != null ? RunStats.Instance.TimeSurvived : 0f;
+        if (running) yield break;
+        running = true;
+        Init();
+
+        RunStats stats = RunStats.Instance != null ? RunStats.Instance : FindAnyObjectByType<RunStats>();
+        float time = stats != null ? stats.TimeSurvived : 0f;
+        string source = stats != null ? "RunStats" : "sem RunStats na cena";
+
+        // se o RunStats nao contou, usa o relogio da cena (so avanca com o jogo rodando)
+        if (time <= 0f)
+        {
+            time = Time.timeSinceLevelLoad;
+            source += " -> usou o relogio da cena";
+        }
+
+        Debug.Log("Placar: tempo da partida = " + RunStats.Format(time) + " (" + source + ")", this);
+
+        if (root != null) root.SetActive(true);
+        if (finalTimeText != null) finalTimeText.text = finalTimePrefix + RunStats.Format(time);
+        if (listText != null) listText.text = "";
+
         int rank = -1;
-
-        root.SetActive(true);
-        continueHint.SetActive(false);
-        finalTimeText.text = "VOCÊ SOBREVIVEU\n" + RunStats.Format(time);
-        listText.text = "";
-
         bool qualifies = ScoreBoard.Qualifies(time);
-        nameInput.gameObject.SetActive(qualifies);
-        submitButton.gameObject.SetActive(qualifies);
+        SetEntryVisible(qualifies);
 
         if (qualifies)
         {
-            submitted = false;
-            nameInput.text = "";
+            if (nameInput != null)
+            {
+                submitted = false;
+                nameInput.text = "";
 
-            yield return null;
-            nameInput.Select();
-            nameInput.ActivateInputField();
-
-            while (!submitted)
                 yield return null;
+                nameInput.Select();
+                nameInput.ActivateInputField();
 
-            rank = ScoreBoard.Add(nameInput.text, time);
-            nameInput.gameObject.SetActive(false);
-            submitButton.gameObject.SetActive(false);
+                while (!submitted)
+                    yield return null;
+
+                rank = ScoreBoard.Add(nameInput.text, time);
+            }
+            else
+            {
+                rank = ScoreBoard.Add("", time);
+            }
+
+            SetEntryVisible(false);
         }
 
-        listText.text = BuildList(rank);
-        continueHint.SetActive(true);
+        if (listText != null) listText.text = BuildList(rank);
+        running = false;
+    }
 
-        yield return null;
-        while (Keyboard.current == null || !Keyboard.current.spaceKey.wasPressedThisFrame)
-            yield return null;
-
-        root.SetActive(false);
+    private void SetEntryVisible(bool visible)
+    {
+        if (nameInput != null) nameInput.gameObject.SetActive(visible);
+        if (submitButton != null) submitButton.gameObject.SetActive(visible);
     }
 
     private string BuildList(int highlightRank)
@@ -78,14 +118,13 @@ public class ScoreboardUI : MonoBehaviour
         if (list.Count == 0) return "";
 
         StringBuilder sb = new StringBuilder();
-        sb.Append("<b>MELHORES TEMPOS</b>\n");
 
         for (int i = 0; i < list.Count; i++)
         {
-            string line = (i + 1) + ".<pos=12%>" + list[i].name + "<pos=75%>" + RunStats.Format(list[i].time);
+            string line = (i + 1) + ".<pos=14%>" + list[i].name + "<pos=66%>" + RunStats.Format(list[i].time);
 
             if (i == highlightRank)
-                line = "<color=#ffcc33>" + line + "</color>";   // destaca a sua posição
+                line = "<color=#ffffff>" + line + "</color>";   // destaca a sua posicao
 
             sb.Append(line).Append('\n');
         }

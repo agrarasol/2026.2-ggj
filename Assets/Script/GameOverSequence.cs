@@ -151,12 +151,18 @@ public class GameOverSequence : MonoBehaviour
 
     private void Update()
     {
-        if (!IsRunning || Time.frameCount == startedFrame || Keyboard.current == null || GameFlow.Instance == null ||
+        if (!IsRunning || Time.frameCount == startedFrame || GameFlow.Instance == null ||
             GameFlow.Instance.IsLoading || GameFlow.Instance.State != GameState.Credits)
             return;
 
         Keyboard keyboard = Keyboard.current;
-        if (keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame)
+        bool keyPressed = keyboard != null &&
+            (keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame);
+
+        // celular: tocar na tela pula os creditos
+        bool tapped = Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
+
+        if (keyPressed || tapped)
             Skip();
     }
 

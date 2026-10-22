@@ -1936,12 +1936,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameFlow
   mainMenuPanel: {fileID: 1289213948}
   gameOverPanel: {fileID: 218621724}
+  pausePanel: {fileID: 0}
   screenTransition: {fileID: 2107400003}
   gameOverSequence: {fileID: 646683681}
   playButton: {fileID: 1170777320}
+  creditsButton: {fileID: 0}
+  fullscreenButton: {fileID: 0}
   quitButton: {fileID: 1328373490}
   retryButton: {fileID: 1287163194}
   mainMenuButton: {fileID: 1020552696}
+  resumeButton: {fileID: 0}
+  restartButton: {fileID: 0}
+  pauseExitButton: {fileID: 0}
 --- !u!4 &646683680
 Transform:
   m_ObjectHideFlags: 0
@@ -3359,7 +3365,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!114 &967192115
@@ -6336,7 +6342,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!114 &1676184738
@@ -13007,7 +13013,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!1 &2028118937
@@ -13312,7 +13318,7 @@ SpriteRenderer:
   m_Size: {x: 1, y: 1}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
   m_BlendShapeWeights: []
 --- !u!1 &2043366203
@@ -13539,6 +13545,7 @@ MonoBehaviour:
   survivalTimer: {fileID: 2107300000}
   lootTable: {fileID: 11400000, guid: fbb2fd10d55246299ef436b18d3b1926, type: 2}
   feedback: {fileID: 1663854797}
+  collectedItems: {fileID: 0}
 --- !u!114 &2107000505
 MonoBehaviour:
   m_ObjectHideFlags: 0
